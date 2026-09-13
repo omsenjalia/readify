@@ -1,39 +1,19 @@
-import type { WordBlock } from "@/types";
-import { orpIndex } from "@/lib/orp";
+import type { ContentBlock } from "@/types";
 
-// Block flattening — placeholder.
-//
-// The processor returns documents as a list of text/heading blocks. This
-// helper normalizes them into an ordered list of WordBlocks, each tagged
-// with its ORP index so the reader can highlight it during playback.
+export type ReadItem =
+  | { kind: "word"; text: string }
+  | { kind: "image"; url: string };
 
-const BLOCK_GLUE: Record<string, string> = {
-  heading: "\n\n",
-  paragraph: "\n\n",
-  list_item: "\n",
-};
-
-export function flattenBlocks(
-  blocks: Array<{ type: string; text: string }>
-): WordBlock[] {
-  const output: WordBlock[] = [];
-  let id = 0;
-
-  const pushWord = (text: string, glue: string) => {
-    if (id > 0 && glue) {
-      output.push({ id: String(id++), text: glue, orpIndex: 0 });
-    }
-    for (const raw of text.split(/\s+/)) {
-      const word = raw.trim();
-      if (!word) continue;
-      output.push({ id: String(id++), text: word, orpIndex: orpIndex(word) });
-    }
-  };
-
+export function flattenBlocks(blocks: ContentBlock[]): ReadItem[] {
+  const items: ReadItem[] = [];
   for (const block of blocks) {
-    const glue = BLOCK_GLUE[block.type] ?? "\n";
-    pushWord(block.text, glue);
+    if (block.type === "text" && block.words) {
+      for (const word of block.words) {
+        items.push({ kind: "word", text: word });
+      }
+    } else if (block.type === "image" && block.image_url) {
+      items.push({ kind: "image", url: block.image_url });
+    }
   }
-
-  return output;
+  return items;
 }

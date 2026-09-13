@@ -1,8 +1,22 @@
 @import "tailwindcss";
 
-:root {
+:root,
+.theme-light {
   --background: #ffffff;
   --foreground: #171717;
+  --muted-foreground: #6b7280;
+}
+
+.theme-dark {
+  --background: #0b0b0f;
+  --foreground: #ededed;
+  --muted-foreground: #9ca3af;
+}
+
+.theme-sepia {
+  --background: #f5ecd7;
+  --foreground: #3b2f1e;
+  --muted-foreground: #8a7a5c;
 }
 
 @theme inline {
