@@ -53,6 +53,21 @@ def _get_status(job_id: str) -> dict | None:
         return _jobs.get(job_id)
 
 
+def _set_progress(document_id: str, message: str) -> None:
+    """Persist a human-readable progress message onto the document row."""
+    try:
+        get_supabase().table("documents").update(
+            {
+                "progress_msg": message,
+                "updated_at": datetime.now(UTC).isoformat(),
+            }
+        ).eq("id", document_id).execute()
+    except Exception:
+        logger.warning(
+            "failed to update progress for %s", document_id, exc_info=True
+        )
+
+
 def _slugify(title: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", (title or "").lower()).strip("-")
     if not slug:
@@ -131,6 +146,7 @@ def _persist_document(
             "word_count": word_count,
             "is_favorite": False,
             "error_msg": None,
+            "progress_msg": None,
             "updated_at": now,
         }
     ).execute()
@@ -172,8 +188,18 @@ def _run_job(
     filename: str | None,
 ) -> None:
     _set_status(job_id, "processing")
+    progress_messages = {
+        "pdf": "Extracting text…",
+        "docx": "Extracting text…",
+        "youtube": "Fetching transcript…",
+        "text": "Parsing text…",
+    }
     try:
+        _set_progress(
+            document_id, progress_messages.get(source_type, "Processing…")
+        )
         blocks = _extract_blocks(source_type, content, filename, url, text)
+        _set_progress(document_id, "Building reader content…")
         slug = _slugify(title)
         word_count = _persist_document(
             document_id, slug, title, source_type, blocks
@@ -188,6 +214,19 @@ def _run_job(
     except Exception as exc:
         logger.exception("job %s failed", job_id)
         _set_status(job_id, "failed", error=str(exc))
+        try:
+            get_supabase().table("documents").update(
+                {
+                    "status": "error",
+                    "error_msg": str(exc),
+                    "progress_msg": None,
+                    "updated_at": datetime.now(UTC).isoformat(),
+                }
+            ).eq("id", document_id).execute()
+        except Exception:
+            logger.exception(
+                "failed to persist error status for %s", document_id
+            )
 
 
 @router.post(

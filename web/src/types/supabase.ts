@@ -54,6 +54,7 @@ export type Database = {
           is_favorite: boolean;
           last_read_at: string | null;
           error_msg: string | null;
+          progress_msg: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -69,6 +70,7 @@ export type Database = {
           is_favorite?: boolean;
           last_read_at?: string | null;
           error_msg?: string | null;
+          progress_msg?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -84,6 +86,7 @@ export type Database = {
           is_favorite?: boolean;
           last_read_at?: string | null;
           error_msg?: string | null;
+          progress_msg?: string | null;
           created_at?: string;
           updated_at?: string;
         };
