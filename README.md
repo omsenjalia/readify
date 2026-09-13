@@ -66,8 +66,13 @@ uvicorn main:app --reload --port 8000   # http://localhost:8000/health
    - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_URL`
    - **anon/public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - **service_role key** (keep secret) → `SUPABASE_SERVICE_ROLE_KEY` (both apps)
-3. Run the SQL migrations in the SQL Editor to create the required tables
-   *(migrations coming soon)*
+3. Apply the schema: paste `supabase/migrations/20260113120000_database_schema_and_rls.sql`
+   into the **SQL Editor** and run it (creates tables, RLS policies, and the
+   public `document-images` storage bucket). Or, once linked:
+   `npx supabase login && npx supabase link --project-ref <ref>` then
+   `npx supabase db push`.
+4. Regenerate TypeScript types after any schema change (requires login):
+   `cd web && npm run db:types`
 
 ## CI
 

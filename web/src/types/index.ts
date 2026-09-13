@@ -1,38 +1,29 @@
+import type { Database } from "./supabase";
+export type { Database } from "./supabase";
+
 export type SourceType = "pdf" | "docx" | "youtube" | "text" | "image";
 
-export type ProcessingStatus =
-  | "pending"
-  | "processing"
-  | "completed"
-  | "failed";
+export type ProcessingStatus = "processing" | "ready" | "error";
+
+export type Document = Database["public"]["Tables"]["documents"]["Row"];
+export type DocumentInsert =
+  Database["public"]["Tables"]["documents"]["Insert"];
+export type ContentBlock =
+  Database["public"]["Tables"]["content_blocks"]["Row"];
+export type ContentBlockInsert =
+  Database["public"]["Tables"]["content_blocks"]["Insert"];
+export type ReadingSession =
+  Database["public"]["Tables"]["reading_sessions"]["Row"];
+export type ReadingPreferences =
+  Database["public"]["Tables"]["reading_preferences"]["Row"];
+
+export type DocumentWithProgress = Document & {
+  word_index?: number;
+  wpm?: number;
+};
 
 export interface WordBlock {
   id: string;
   text: string;
   orpIndex: number;
-}
-
-export interface DocumentRecord {
-  id: string;
-  slug: string;
-  title: string;
-  source_type: SourceType;
-  status: ProcessingStatus;
-  word_count: number;
-  created_at: string;
-}
-
-export interface ReadingSession {
-  id: string;
-  document_id: string;
-  wpm: number;
-  progress: number;
-  last_word_index: number;
-  updated_at: string;
-}
-
-export interface UserPreferences {
-  wpm: number;
-  font_size: number;
-  theme: string;
 }

@@ -5,6 +5,7 @@ import secrets
 import tempfile
 import threading
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import (
     APIRouter,
@@ -108,19 +109,55 @@ def _persist_document(
     source_type: str,
     blocks: list[dict],
 ) -> int:
+    """Write a processed document + its content blocks to Supabase.
+
+    Documents land in ``public.documents``; each block becomes a row in
+    ``public.content_blocks`` (type 'text' stores tokenized words, type
+    'image' stores a public image_url). Reprocessing a document replaces
+    its existing blocks so re-runs stay idempotent.
+    """
     supabase = get_supabase()
     word_count = sum(len(b["text"].split()) for b in blocks)
+    now = datetime.now(UTC).isoformat()
+
     supabase.table("documents").upsert(
         {
             "id": document_id,
             "slug": slug,
             "title": title or "Untitled document",
             "source_type": source_type,
-            "status": "completed",
+            "status": "ready",
+            "visibility": "private",
             "word_count": word_count,
-            "blocks": blocks,
+            "is_favorite": False,
+            "error_msg": None,
+            "updated_at": now,
         }
     ).execute()
+
+    rows = [
+        {
+            "document_id": document_id,
+            "position": position,
+            "type": "image",
+            "image_url": block.get("url") or block.get("image_url"),
+        }
+        if block.get("type") == "image"
+        else {
+            "document_id": document_id,
+            "position": position,
+            "type": "text",
+            "words": block.get("text", "").split(),
+        }
+        for position, block in enumerate(blocks)
+    ]
+
+    supabase.table("content_blocks").delete().eq(
+        "document_id", document_id
+    ).execute()
+    if rows:
+        supabase.table("content_blocks").insert(rows).execute()
+
     return word_count
 
 
