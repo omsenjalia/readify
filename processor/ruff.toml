@@ -1,0 +1,10 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[lint.per-file-ignores]
+# FastAPI's Form()/File() defaults are the canonical idiom and must NOT be
+# hoisted to module level.
+"routers/process.py" = ["B008"]
