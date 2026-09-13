@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import clsx from "clsx";
 import {
   AlignLeft,
@@ -180,24 +181,15 @@ export default function LibraryTable({
   const [editValue, setEditValue] = useState("");
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
     () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
       if (clickTimer.current) clearTimeout(clickTimer.current);
     },
     [],
   );
-
-  function showToast(message: string) {
-    setToast(message);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2200);
-  }
 
   const counts = useMemo(
     () => ({
@@ -254,11 +246,12 @@ export default function LibraryTable({
         body: JSON.stringify({ title: next }),
       });
       if (!res.ok) throw new Error("rename failed");
+      toast.success(`Renamed to “${next}”`);
     } catch {
       setDocs((ds) =>
         ds.map((d) => (d.id === doc.id ? { ...d, title: prevTitle } : d)),
       );
-      showToast("Couldn't rename document");
+      toast.error("Couldn't rename document");
     }
   }
 
@@ -274,12 +267,12 @@ export default function LibraryTable({
         body: JSON.stringify({ is_favorite: next }),
       });
       if (!res.ok) throw new Error("favorite failed");
-      showToast(next ? "Added to Favorites" : "Removed from Favorites");
+      toast.success(next ? "Added to Favorites" : "Removed from Favorites");
     } catch {
       setDocs((ds) =>
         ds.map((d) => (d.id === doc.id ? { ...d, is_favorite: !next } : d)),
       );
-      showToast("Couldn't update favorite");
+      toast.error("Couldn't update favorite");
     }
   }
 
@@ -292,8 +285,9 @@ export default function LibraryTable({
       if (!res.ok) throw new Error("delete failed");
       setDocs((ds) => ds.filter((d) => d.id !== doc.id));
       setConfirmingId(null);
+      toast.success("Document deleted");
     } catch {
-      showToast("Couldn't delete document");
+      toast.error("Couldn't delete document");
     } finally {
       setDeleting(false);
     }
@@ -398,13 +392,13 @@ export default function LibraryTable({
 
       {/* Table */}
       <div className="mt-4 overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full min-w-[720px] text-left">
+        <table className="w-full text-left md:min-w-[720px]">
           <thead>
             <tr className="border-b border-gray-200 text-xs font-medium uppercase tracking-wide text-gray-400">
               <th className="px-6 py-3">Title</th>
-              <th className="px-3 py-3">Type</th>
-              <th className="px-3 py-3">Words</th>
-              <th className="px-3 py-3">Last read</th>
+              <th className="hidden px-3 py-3 md:table-cell">Type</th>
+              <th className="hidden px-3 py-3 md:table-cell">Words</th>
+              <th className="hidden px-3 py-3 md:table-cell">Last read</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-6 py-3" />
             </tr>
@@ -445,10 +439,10 @@ export default function LibraryTable({
                           }
                           onClick={() => toggleFavorite(doc)}
                           className={clsx(
-                            "shrink-0 rounded-md p-1 transition",
+                            "flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition",
                             doc.is_favorite
                               ? "text-amber-400"
-                              : "text-gray-300 opacity-0 hover:text-amber-400 focus:opacity-100 group-hover:opacity-100",
+                              : "text-gray-300 opacity-100 hover:text-amber-400 focus:opacity-100 md:h-auto md:w-auto md:p-1 md:opacity-0 md:group-hover:opacity-100",
                           )}
                         >
                           <Star
@@ -462,15 +456,15 @@ export default function LibraryTable({
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-3.5">
+                <td className="hidden px-3 py-3.5 md:table-cell">
                   <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
                     {TYPE_LABELS[doc.source_type] ?? "Text"}
                   </span>
                 </td>
-                <td className="px-3 py-3.5 text-sm text-gray-500">
+                <td className="hidden px-3 py-3.5 text-sm text-gray-500 md:table-cell">
                   {(doc.word_count ?? 0).toLocaleString()}
                 </td>
-                <td className="px-3 py-3.5 text-sm text-gray-500">
+                <td className="hidden px-3 py-3.5 text-sm text-gray-500 md:table-cell">
                   {timeAgo(doc.last_read_at ?? doc.last_session_at)}
                 </td>
                 <td className="px-3 py-3.5">{statusPill(statusOf(doc))}</td>
@@ -482,7 +476,7 @@ export default function LibraryTable({
                       onClick={() =>
                         setMenuId(menuId === doc.id ? null : doc.id)
                       }
-                      className="rounded-lg p-1.5 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover:opacity-100"
+                      className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 opacity-100 transition hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 md:h-auto md:w-auto md:p-1.5 md:opacity-0 md:group-hover:opacity-100"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
@@ -571,14 +565,6 @@ export default function LibraryTable({
         </div>
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-8">
-          <div className="rounded-full bg-gray-900 px-4 py-2 text-xs font-medium text-white shadow-xl">
-            {toast}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

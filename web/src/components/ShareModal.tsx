@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import clsx from "clsx";
 import { Check, Copy, FileText, X } from "lucide-react";
 import {
@@ -57,7 +58,6 @@ function ShareModalContent({
 }) {
   const [visibility, setVisibility] = useState<Visibility>(doc.visibility);
   const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [highlightVisibility, setHighlightVisibility] = useState(
     initialSection === "visibility",
   );
@@ -79,11 +79,6 @@ function ShareModalContent({
     timers.current.push(setTimeout(fn, ms));
   };
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    schedule(() => setToast(null), 2000);
-  };
-
   const handleCopy = async () => {
     const ok = await copyToClipboard(shareUrl);
     if (ok) {
@@ -99,13 +94,13 @@ function ShareModalContent({
     onVisibilityChange?.(next);
     const ok = await updateDocumentVisibility(doc.id, next);
     if (ok) {
-      showToast(
+      toast.success(
         next === "public" ? "Link is now public" : "Link is now private",
       );
     } else {
       setVisibility(prev);
       onVisibilityChange?.(prev);
-      showToast("Couldn't update visibility — try again.");
+      toast.error("Couldn't update visibility — try again.");
     }
   };
 
@@ -117,12 +112,12 @@ function ShareModalContent({
       if (!ok) {
         setVisibility("private");
         onVisibilityChange?.("private");
-        showToast("Couldn't make the link public — try again.");
+        toast.error("Couldn't make the link public — try again.");
         return;
       }
     }
     const ok = await handleCopy();
-    showToast(ok ? "Link copied to clipboard" : "Couldn't copy the link.");
+    toast(ok ? "Link copied to clipboard" : "Couldn't copy the link.");
   };
 
   return (
@@ -294,13 +289,6 @@ function ShareModalContent({
           Share link
         </button>
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg sm:top-auto sm:bottom-8">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

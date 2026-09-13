@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import clsx from "clsx";
 import {
   BookOpen,
@@ -76,8 +84,23 @@ export default function ReaderClient({
   const [wpm, setWpm] = useState(
     Math.min(800, Math.max(100, initialWpm ?? 800)),
   );
-  const [fontSize, setFontSize] = useState(
-    Math.min(68, Math.max(28, preferences?.font_size ?? 48)),
+  const isSmallViewport = useSyncExternalStore(
+    (onStoreChange) => {
+      const mql = window.matchMedia("(max-width: 639px)");
+      mql.addEventListener("change", onStoreChange);
+      return () => mql.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(max-width: 639px)").matches,
+    () => false,
+  );
+  const [fontOverride, setFontOverride] = useState<number | null>(null);
+  // Default font is smaller on phones unless the user chooses one explicitly.
+  const fontSize = Math.min(
+    68,
+    Math.max(
+      28,
+      fontOverride ?? preferences?.font_size ?? (isSmallViewport ? 36 : 48),
+    ),
   );
   const [theme, setTheme] = useState<string>(preferences?.theme ?? "light");
   const [showProgressBar, setShowProgressBar] = useState(
@@ -264,7 +287,8 @@ export default function ReaderClient({
         getPreferences(authUserId),
       ]).then(([progress, prefs]) => {
         if (prefs) {
-          if (typeof prefs.font_size === "number") setFontSize(prefs.font_size);
+          if (typeof prefs.font_size === "number")
+            setFontOverride(prefs.font_size);
           if (prefs.theme) setTheme(prefs.theme);
           if (prefs.show_progress_bar != null)
             setShowProgressBar(!!prefs.show_progress_bar);
@@ -402,10 +426,14 @@ export default function ReaderClient({
         step(1);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        const next = Math.min(800, wpmRef.current + 25);
         changeWpm(25);
+        toast.success(`${next} WPM`, { id: "reader-wpm" });
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
+        const next = Math.max(100, wpmRef.current - 25);
         changeWpm(-25);
+        toast.success(`${next} WPM`, { id: "reader-wpm" });
       } else if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
       }
@@ -424,12 +452,16 @@ export default function ReaderClient({
     if (!resumePrompt) return;
     lastSavedRef.current = resumePrompt.index;
     setResumePrompt(null);
+    toast.success(
+      `Resumed from word ${resumePrompt.index.toLocaleString()}`,
+    );
   }
 
   function handleResumeDismiss() {
     setCurrentIndex(0);
     lastSavedRef.current = 0;
     setResumePrompt(null);
+    toast("Started from the beginning");
   }
 
   async function handleRename() {
@@ -645,7 +677,7 @@ export default function ReaderClient({
           max={68}
           step={4}
           value={fontSize}
-          onChange={(e) => setFontSize(Number(e.target.value))}
+          onChange={(e) => setFontOverride(Number(e.target.value))}
           className="w-full accent-[#4F6EF6]"
         />
         <div className="mt-1 flex justify-between text-[10px] text-gray-400">
@@ -665,7 +697,10 @@ export default function ReaderClient({
             <button
               key={t.id}
               type="button"
-              onClick={() => setTheme(t.id)}
+              onClick={() => {
+                setTheme(t.id);
+                toast.success(`${t.label} theme`, { id: "reader-theme" });
+              }}
               className={clsx(
                 "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
                 theme === t.id
@@ -683,17 +718,32 @@ export default function ReaderClient({
         <SettingRow
           label="Show progress bar"
           checked={showProgressBar}
-          onChange={setShowProgressBar}
+          onChange={(v) => {
+            setShowProgressBar(v);
+            toast.success(v ? "Progress bar on" : "Progress bar off", {
+              id: "reader-toggle",
+            });
+          }}
         />
         <SettingRow
           label="Highlight ORP char"
           checked={highlightOrp}
-          onChange={setHighlightOrp}
+          onChange={(v) => {
+            setHighlightOrp(v);
+            toast.success(v ? "ORP highlight on" : "ORP highlight off", {
+              id: "reader-toggle",
+            });
+          }}
         />
         <SettingRow
           label="Auto-pause images"
           checked={autoPauseImages}
-          onChange={setAutoPauseImages}
+          onChange={(v) => {
+            setAutoPauseImages(v);
+            toast.success(v ? "Auto-pause on" : "Auto-pause off", {
+              id: "reader-toggle",
+            });
+          }}
         />
       </div>
     </>
@@ -852,7 +902,7 @@ export default function ReaderClient({
             className="hidden w-28 accent-[#4F6EF6] md:block"
           />
 
-          <div className="relative">
+          <div className="relative hidden md:block">
             <button
               type="button"
               onClick={() => setWpmOpen((v) => !v)}
@@ -892,7 +942,12 @@ export default function ReaderClient({
                       <button
                         key={preset}
                         type="button"
-                        onClick={() => setWpm(preset)}
+                        onClick={() => {
+                          setWpm(preset);
+                          toast.success(`${preset} WPM`, {
+                            id: "reader-wpm",
+                          });
+                        }}
                         className={clsx(
                           "rounded-lg px-1 py-1.5 text-xs font-semibold transition",
                           wpm === preset
@@ -913,7 +968,7 @@ export default function ReaderClient({
             type="button"
             onClick={() => step(-1)}
             aria-label="Previous word"
-            className="rounded-full p-2 text-gray-600 transition hover:bg-black/5"
+            className="flex h-12 w-12 items-center justify-center rounded-full text-gray-600 transition hover:bg-black/5"
           >
             <SkipBack className="h-5 w-5" />
           </button>
@@ -935,12 +990,12 @@ export default function ReaderClient({
             type="button"
             onClick={() => step(1)}
             aria-label="Next word"
-            className="rounded-full p-2 text-gray-600 transition hover:bg-black/5"
+            className="flex h-12 w-12 items-center justify-center rounded-full text-gray-600 transition hover:bg-black/5"
           >
             <SkipForward className="h-5 w-5" />
           </button>
 
-          <div className="relative">
+          <div className="relative hidden md:block">
             <button
               type="button"
               onClick={() => setFontOpen((v) => !v)}
@@ -970,7 +1025,7 @@ export default function ReaderClient({
                     max={68}
                     step={4}
                     value={fontSize}
-                    onChange={(e) => setFontSize(Number(e.target.value))}
+                    onChange={(e) => setFontOverride(Number(e.target.value))}
                     className="mt-2 w-full accent-[#4F6EF6]"
                   />
                 </div>
@@ -1004,7 +1059,7 @@ export default function ReaderClient({
             type="button"
             onClick={() => setShowSettings((v) => !v)}
             aria-label="Reading settings"
-            className="rounded-lg p-2 text-gray-700 transition hover:bg-black/5 md:hidden"
+            className="flex h-12 w-12 items-center justify-center rounded-lg text-gray-700 transition hover:bg-black/5 md:hidden"
           >
             <Settings className="h-5 w-5" />
           </button>
@@ -1046,7 +1101,7 @@ export default function ReaderClient({
                 type="button"
                 onClick={() => setShowSettings(false)}
                 aria-label="Close settings"
-                className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100"
+                className="flex h-12 w-12 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
               >
                 <X className="h-5 w-5" />
               </button>

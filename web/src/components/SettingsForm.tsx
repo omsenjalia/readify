@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import clsx from "clsx";
-import { Check, KeyRound, LogOut } from "lucide-react";
+import { KeyRound, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReadingPreferences } from "@/types";
 
@@ -66,18 +67,13 @@ export default function SettingsForm({
     preferences.auto_pause_images,
   );
 
-  const [saved, setSaved] = useState(false);
-  const [savedError, setSavedError] = useState(false);
-
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordDone, setPasswordDone] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Apply theme live so Settings mirrors the Reader.
   useEffect(() => {
@@ -91,34 +87,22 @@ export default function SettingsForm({
   useEffect(
     () => () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      if (savedTimer.current) clearTimeout(savedTimer.current);
     },
     [],
   );
 
-  function showSaved() {
-    setSavedError(false);
-    setSaved(true);
-    if (savedTimer.current) clearTimeout(savedTimer.current);
-    savedTimer.current = setTimeout(() => setSaved(false), 2000);
-  }
-
   function queueSave(patch: Partial<ReadingPreferences>) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch("/api/preferences", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        });
-        if (!res.ok) throw new Error("save failed");
-        showSaved();
-      } catch {
-        setSavedError(true);
-        setSaved(true);
-        if (savedTimer.current) clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSaved(false), 2000);
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        toast.success("Settings saved");
+      } else {
+        toast.error("Couldn't save changes");
       }
     }, 500);
   }
@@ -126,7 +110,6 @@ export default function SettingsForm({
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     setPasswordError(null);
-    setPasswordDone(false);
 
     if (newPassword.length < 6) {
       setPasswordError("Password must be at least 6 characters.");
@@ -145,7 +128,7 @@ export default function SettingsForm({
       setNewPassword("");
       setConfirmPassword("");
       setPasswordOpen(false);
-      setPasswordDone(true);
+      toast.success("Password updated successfully.");
     } catch (err) {
       setPasswordError(
         err instanceof Error ? err.message : "Couldn't update password.",
@@ -326,12 +309,6 @@ export default function SettingsForm({
               Change password
             </button>
 
-            {passwordDone && !passwordOpen && (
-              <p className="mt-2 text-sm font-medium text-green-600">
-                Password updated successfully.
-              </p>
-            )}
-
             {passwordOpen && (
               <form
                 onSubmit={handleChangePassword}
@@ -407,21 +384,6 @@ export default function SettingsForm({
           </div>
         </div>
       </div>
-
-      {/* Save confirmation toast */}
-      {saved && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-8">
-          <div
-            className={clsx(
-              "flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium text-white shadow-xl",
-              savedError ? "bg-red-600" : "bg-gray-900",
-            )}
-          >
-            {!savedError && <Check className="h-3.5 w-3.5" />}
-            {savedError ? "Couldn't save changes" : "Saved"}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

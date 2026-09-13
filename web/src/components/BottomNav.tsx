@@ -34,9 +34,10 @@ export default function BottomNav() {
               <Link
                 key={tab.label}
                 href={tab.href}
-                className="flex flex-col items-center justify-center gap-0.5 pb-2 pt-2.5"
+                aria-label={tab.label}
+                className="flex min-h-[56px] flex-col items-center justify-center gap-0.5 pb-1.5 pt-2"
               >
-                <span className="flex h-11 w-11 -translate-y-2 items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30">
+                <span className="flex h-12 w-12 -translate-y-2.5 items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30">
                   <Icon className="h-6 w-6" />
                 </span>
                 <span className="text-[10px] font-medium text-gray-500">
@@ -50,12 +51,13 @@ export default function BottomNav() {
             <Link
               key={tab.label}
               href={tab.href}
+              aria-label={tab.label}
               className={clsx(
-                "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2.5",
-                active ? "text-indigo-600" : "text-gray-400"
+                "flex min-h-[56px] flex-col items-center justify-center gap-0.5 pb-1.5 pt-2",
+                active ? "font-semibold text-indigo-600" : "text-gray-400"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-6 w-6" />
               <span className="text-[10px] font-medium">{tab.label}</span>
             </Link>
           );

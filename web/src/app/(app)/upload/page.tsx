@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import clsx from "clsx";
 import {
   AlignLeft,
@@ -75,7 +76,6 @@ export default function UploadPage() {
 
   const [tab, setTab] = useState<Tab>("document");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [error, setError] = useState<string | null>(null);
 
   // Document tab
   const [files, setFiles] = useState<File[]>([]);
@@ -132,7 +132,7 @@ export default function UploadPage() {
 
       const failed = updated.find((d) => d.status === "error");
       if (failed) {
-        setError(
+        toast.error(
           failed.error_msg || "Something went wrong while processing your document.",
         );
         setPhase("idle");
@@ -152,29 +152,28 @@ export default function UploadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (tab === "document" && files.length === 0) {
-      setError("Choose at least one file to upload.");
+      toast.error("Choose at least one file to upload.");
       return;
     }
     if (tab === "youtube") {
       if (!ytTitle.trim()) {
-        setError("Give your video a title.");
+        toast.error("Give your video a title.");
         return;
       }
       if (!videoId) {
-        setError("Enter a valid YouTube URL.");
+        toast.error("Enter a valid YouTube URL.");
         return;
       }
     }
     if (tab === "text") {
       if (!textTitle.trim()) {
-        setError("Give your text a title.");
+        toast.error("Give your text a title.");
         return;
       }
       if (!textContent.trim()) {
-        setError("Paste some text to upload.");
+        toast.error("Paste some text to upload.");
         return;
       }
     }
@@ -234,8 +233,13 @@ export default function UploadPage() {
       pendingRef.current = created.map((c) => ({ ...c, status: "processing" }));
       setPendingDocs(pendingRef.current);
       setPhase("processing");
+      toast.success(
+        created.length > 1
+          ? `Uploaded ${created.length} documents — processing…`
+          : "Upload started — processing…",
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
+      toast.error(err instanceof Error ? err.message : "Upload failed.");
       setPhase("idle");
     }
   };
@@ -369,12 +373,6 @@ export default function UploadPage() {
                     </p>
                   </div>
                 </>
-              )}
-
-              {error && (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {error}
-                </p>
               )}
 
               <button
