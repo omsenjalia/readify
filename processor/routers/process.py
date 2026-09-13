@@ -77,7 +77,7 @@ def _update_document(document_id: str, **fields) -> None:
     ).execute()
 
 
-def _extract_blocks(
+async def _extract_blocks(
     source_type: str,
     document_id: str,
     storage_path: str | None,
@@ -103,7 +103,13 @@ def _extract_blocks(
     file_bytes = _download_storage_file(storage_path)
 
     if source_type == "pdf":
-        return pdf_service.extract_pdf_blocks(file_bytes, document_id)
+
+        async def report_progress(msg: str) -> None:
+            _update_document(document_id, progress_msg=msg)
+
+        return await pdf_service.extract_pdf_blocks(
+            file_bytes, document_id, progress_cb=report_progress
+        )
     if source_type == "docx":
         return docx_service.extract_docx_bytes(file_bytes)
 
@@ -189,7 +195,7 @@ def _persist_document(
     return word_count
 
 
-def _run_job(
+async def _run_job(
     job_id: str,
     source_type: str,
     document_id: str,
@@ -209,7 +215,7 @@ def _run_job(
             document_id, status="processing", progress_msg=progress, error_msg=None
         )
 
-        blocks = _extract_blocks(
+        blocks = await _extract_blocks(
             source_type, document_id, storage_path, youtube_url, raw_text
         )
 
