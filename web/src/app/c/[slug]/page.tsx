@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getDocumentBySlug } from "@/lib/documents";
 import { flattenBlocks } from "@/lib/flatten";
 import type {
   ContentBlock,
@@ -7,6 +9,26 @@ import type {
   ReadingPreferences,
 } from "@/types";
 import ReaderClient from "@/components/Reader";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const doc = await getDocumentBySlug(slug);
+  if (!doc || doc.visibility !== "public") return {};
+
+  return {
+    title: `${doc.title} — Readify`,
+    description: `Speed read "${doc.title}" — ${doc.word_count.toLocaleString()} words`,
+    openGraph: {
+      title: doc.title,
+      description: `${doc.word_count.toLocaleString()} words · Read faster with Readify`,
+      url: `https://readify.app/c/${doc.slug}`,
+    },
+  };
+}
 
 export default async function ReaderPage({
   params,
@@ -33,6 +55,7 @@ export default async function ReaderPage({
   } = await supabase.auth.getUser();
 
   const isOwner = !!user && doc.user_id === user.id;
+  const isSignedIn = !!user;
 
   if (doc.visibility === "private" && !isOwner) {
     notFound();
@@ -80,6 +103,7 @@ export default async function ReaderPage({
       document={doc}
       items={items}
       isOwner={isOwner}
+      isSignedIn={isSignedIn}
       preferences={preferences}
       initialIndex={initialIndex}
       initialWpm={initialWpm}

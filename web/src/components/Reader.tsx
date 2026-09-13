@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
   BookOpen,
-  Check,
   ChevronDown,
   Globe,
   Lock,
@@ -27,11 +26,13 @@ import { createClient } from "@/lib/supabase/client";
 import { splitAtORP } from "@/lib/orp";
 import { pctComplete } from "@/lib/progress";
 import type { ReadItem } from "@/lib/flatten";
+import ShareModal, { type ReaderShareDoc } from "@/components/ShareModal";
 
 export default function ReaderClient({
   document: doc,
   items,
   isOwner,
+  isSignedIn,
   preferences,
   initialIndex,
   initialWpm,
@@ -45,6 +46,7 @@ export default function ReaderClient({
   };
   items: ReadItem[];
   isOwner: boolean;
+  isSignedIn: boolean;
   preferences: {
     default_wpm?: number;
     font_size?: number;
@@ -85,7 +87,10 @@ export default function ReaderClient({
   const [wpmOpen, setWpmOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareSection, setShareSection] = useState<"link" | "visibility">(
+    "link",
+  );
 
   const [title, setTitle] = useState(doc.title);
   const [visibility, setVisibility] = useState(doc.visibility);
@@ -105,6 +110,26 @@ export default function ReaderClient({
   const pct = pctComplete(wordsRead, totalWords);
   const wordsLeft = Math.max(0, totalWords - wordsRead);
   const minsLeft = wordsLeft > 0 ? Math.ceil(wordsLeft / wpm) : 0;
+  const readMinutes = Math.max(1, Math.round(totalWords / Math.max(wpm, 1)));
+
+  const shareDoc: ReaderShareDoc = {
+    id: doc.id,
+    slug: doc.slug,
+    title,
+    visibility: visibility === "public" ? "public" : "private",
+    wordCount: totalWords,
+    readMinutes,
+  };
+
+  const shareModal = (
+    <ShareModal
+      open={shareOpen}
+      onClose={() => setShareOpen(false)}
+      doc={shareDoc}
+      initialSection={shareSection}
+      onVisibilityChange={(v) => setVisibility(v)}
+    />
+  );
 
   const currentItem = items[currentIndex];
   const prevItem = currentIndex > 0 ? items[currentIndex - 1] : undefined;
@@ -328,14 +353,10 @@ export default function ReaderClient({
     return () => window.removeEventListener("keydown", onKey);
   }, [togglePlay, step, changeWpm, toggleFullscreen]);
 
-  async function handleShare() {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-    } catch {
-      return;
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function openShare(section: "link" | "visibility") {
+    setShareSection(section);
+    setShareOpen(true);
+    setMenuOpen(false);
   }
 
   async function handleRename() {
@@ -347,18 +368,6 @@ export default function ReaderClient({
       getSupabase()
         .from("documents")
         .update({ title: next, updated_at: new Date().toISOString() })
-        .eq("id", doc.id),
-    );
-  }
-
-  async function handleToggleVisibility() {
-    const next = publicDoc ? "private" : "public";
-    setVisibility(next);
-    if (!userId) return;
-    sendSafe(
-      getSupabase()
-        .from("documents")
-        .update({ visibility: next, updated_at: new Date().toISOString() })
         .eq("id", doc.id),
     );
   }
@@ -405,21 +414,13 @@ export default function ReaderClient({
             {publicDoc ? "Public" : "Private"}
           </span>
 
-          {publicDoc && (
+          {isOwner && (
             <button
               type="button"
-              onClick={handleShare}
+              onClick={() => openShare("link")}
               className="flex shrink-0 items-center gap-1 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium transition hover:bg-black/5"
             >
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-green-600" /> Copied!
-                </>
-              ) : (
-                <>
-                  <Share2 className="h-3.5 w-3.5" /> Share
-                </>
-              )}
+              <Share2 className="h-3.5 w-3.5" /> Share
             </button>
           )}
 
@@ -490,10 +491,7 @@ export default function ReaderClient({
                             )
                           }
                           label={publicDoc ? "Make private" : "Make public"}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            handleToggleVisibility();
-                          }}
+                          onClick={() => openShare("visibility")}
                         />
                         <div className="my-1 border-t border-black/10" />
                         <MenuItem
@@ -514,6 +512,26 @@ export default function ReaderClient({
           )}
         </div>
       </div>
+
+      {!isSignedIn && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-black/10 bg-black/[0.03] px-4 py-2">
+          <p className="text-xs font-medium sm:text-sm">
+            Sign up to save your reading progress
+          </p>
+          <Link
+            href="/signup"
+            className="rounded-full bg-[#4F6EF6] px-3 py-1 text-xs font-semibold text-white transition hover:brightness-110"
+          >
+            Sign up
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-[#4F6EF6] transition hover:bg-black/5"
+          >
+            Log in
+          </Link>
+        </div>
+      )}
     </header>
   );
 
@@ -623,6 +641,7 @@ export default function ReaderClient({
             </p>
           </div>
         </main>
+        {shareModal}
       </div>
     );
   }
@@ -998,6 +1017,8 @@ export default function ReaderClient({
           </div>
         </div>
       )}
+
+      {shareModal}
     </div>
   );
 }
