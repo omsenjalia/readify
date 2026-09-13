@@ -1,22 +1,31 @@
 @import "tailwindcss";
 
-:root,
-.theme-light {
+/* Light theme is the default — no extra class needed on <html>. */
+:root {
   --background: #ffffff;
   --foreground: #171717;
   --muted-foreground: #6b7280;
 }
 
-.theme-dark {
+/* Tailwind dark mode via the "dark" class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
   --background: #0b0b0f;
   --foreground: #ededed;
   --muted-foreground: #9ca3af;
 }
 
-.theme-sepia {
-  --background: #f5ecd7;
-  --foreground: #3b2f1e;
+/* Sepia theme via the "sepia" class on <html>. */
+.sepia {
+  --background: #f5f0e8;
+  --foreground: #3d3d3d;
   --muted-foreground: #8a7a5c;
+}
+
+.sepia body {
+  background-color: #f5f0e8;
+  color: #3d3d3d;
 }
 
 @theme inline {
@@ -27,7 +36,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not(.theme-light):not(.theme-dark):not(.theme-sepia) {
+  :root:not(.dark):not(.sepia) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }

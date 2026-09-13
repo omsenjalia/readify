@@ -236,9 +236,9 @@ export default function ReaderClient({
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("theme-light", "theme-dark", "theme-sepia");
-    if (theme === "light" || theme === "dark" || theme === "sepia") {
-      root.classList.add("theme-" + theme);
+    root.classList.remove("dark", "sepia");
+    if (theme === "dark" || theme === "sepia") {
+      root.classList.add(theme);
     }
   }, [theme]);
 
@@ -702,7 +702,7 @@ export default function ReaderClient({
   if (items.length === 0) {
     return (
       <div
-        className={clsx("theme-" + theme, "flex min-h-screen flex-col")}
+        className="flex min-h-screen flex-col"
         style={{ background: "var(--background)", color: "var(--foreground)" }}
       >
         {Header}
@@ -721,7 +721,7 @@ export default function ReaderClient({
 
   return (
     <div
-      className={clsx("theme-" + theme, "flex min-h-screen flex-col")}
+      className="flex min-h-screen flex-col"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
       {!isFullscreen && Header}
