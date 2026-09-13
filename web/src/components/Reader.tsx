@@ -24,7 +24,14 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitAtORP } from "@/lib/orp";
-import { pctComplete } from "@/lib/progress";
+import {
+  getLocalProgress,
+  getRemoteProgress,
+  pctComplete,
+  setLocalProgress,
+  setRemoteProgress,
+} from "@/lib/progress";
+import { getPreferences, savePreferences } from "@/lib/preferences";
 import type { ReadItem } from "@/lib/flatten";
 import ShareModal, { type ReaderShareDoc } from "@/components/ShareModal";
 
@@ -33,6 +40,7 @@ export default function ReaderClient({
   items,
   isOwner,
   isSignedIn,
+  userId,
   preferences,
   initialIndex,
   initialWpm,
@@ -47,6 +55,7 @@ export default function ReaderClient({
   items: ReadItem[];
   isOwner: boolean;
   isSignedIn: boolean;
+  userId: string | null;
   preferences: {
     default_wpm?: number;
     font_size?: number;
@@ -91,6 +100,10 @@ export default function ReaderClient({
   const [shareSection, setShareSection] = useState<"link" | "visibility">(
     "link",
   );
+  const [resumePrompt, setResumePrompt] = useState<{
+    index: number;
+    wpm: number;
+  } | null>(null);
 
   const [title, setTitle] = useState(doc.title);
   const [visibility, setVisibility] = useState(doc.visibility);
@@ -99,7 +112,8 @@ export default function ReaderClient({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const userId = isOwner ? doc.user_id : null;
+  const ownerId = isOwner ? doc.user_id : null;
+  const authUserId = userId;
 
   const publicDoc = visibility === "public";
 
@@ -140,6 +154,8 @@ export default function ReaderClient({
   const currentIndexRef = useRef(currentIndex);
   const imagePausedRef = useRef(imagePaused);
   const wpmRef = useRef(wpm);
+  const lastSavedRef = useRef(initialIndex ?? 0);
+  const progressLoadedRef = useRef(false);
 
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   function getSupabase() {
@@ -158,68 +174,58 @@ export default function ReaderClient({
     );
   }
 
-  const saveSession = useCallback(
+  const saveProgress = useCallback(
     (index: number, speed: number) => {
-      if (!userId) return;
-      sendSafe(
-        getSupabase()
-          .from("reading_sessions")
-          .upsert(
-            {
-              user_id: userId,
-              document_id: doc.id,
-              word_index: index,
-              wpm: speed,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id,document_id" },
-          ),
-      );
+      if (authUserId) {
+        setRemoteProgress(doc.id, authUserId, index, speed).then(
+          () => {},
+          (err) => console.warn("Readify sync failed:", err),
+        );
+      } else {
+        setLocalProgress(doc.slug, index, speed);
+      }
     },
-    [userId, doc.id],
+    [authUserId, doc.id, doc.slug],
   );
-  const saveSessionRef = useRef(saveSession);
+  const saveProgressRef = useRef(saveProgress);
 
   useEffect(() => {
     playingRef.current = playing;
     currentIndexRef.current = currentIndex;
     imagePausedRef.current = imagePaused;
     wpmRef.current = wpm;
-    saveSessionRef.current = saveSession;
+    saveProgressRef.current = saveProgress;
   });
 
-  useEffect(() => () => saveSessionRef.current(currentIndexRef.current, wpmRef.current), []);
+  useEffect(
+    () => () =>
+      saveProgressRef.current(currentIndexRef.current, wpmRef.current),
+    [],
+  );
 
   useEffect(() => {
-    if (!userId) return;
-    const id = setTimeout(
-      () => saveSessionRef.current(currentIndexRef.current, wpmRef.current),
-      2000,
-    );
-    return () => clearTimeout(id);
-  }, [currentIndex, userId]);
+    if (resumePrompt) return;
+    if (currentIndex - lastSavedRef.current >= 10) {
+      saveProgress(currentIndex, wpm);
+      lastSavedRef.current = currentIndex;
+    }
+  }, [currentIndex, wpm, saveProgress, resumePrompt]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!authUserId) return;
     const id = setTimeout(() => {
-      sendSafe(
-        getSupabase()
-          .from("reading_preferences")
-          .upsert({
-            user_id: userId,
-            default_wpm: wpm,
-            font_size: fontSize,
-            theme,
-            show_progress_bar: showProgressBar,
-            highlight_orp: highlightOrp,
-            auto_pause_images: autoPauseImages,
-            updated_at: new Date().toISOString(),
-          }),
-      );
+      void savePreferences(authUserId, {
+        default_wpm: wpm,
+        font_size: fontSize,
+        theme,
+        show_progress_bar: showProgressBar,
+        highlight_orp: highlightOrp,
+        auto_pause_images: autoPauseImages,
+      });
     }, 500);
     return () => clearTimeout(id);
   }, [
-    userId,
+    authUserId,
     wpm,
     fontSize,
     theme,
@@ -227,6 +233,61 @@ export default function ReaderClient({
     highlightOrp,
     autoPauseImages,
   ]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("theme-light", "theme-dark", "theme-sepia");
+    if (theme === "light" || theme === "dark" || theme === "sepia") {
+      root.classList.add("theme-" + theme);
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (progressLoadedRef.current) return;
+    progressLoadedRef.current = true;
+
+    const clampIndex = (i: number) =>
+      Math.min(Math.max(i, 0), Math.max(items.length - 1, 0));
+    const clampWpm = (w: number) => Math.min(800, Math.max(100, w));
+    const applyProgress = (
+      idx: number,
+      speed: number,
+    ) => {
+      setCurrentIndex(idx);
+      setWpm(clampWpm(speed));
+      setResumePrompt({ index: idx, wpm: clampWpm(speed) });
+    };
+
+    if (authUserId) {
+      Promise.all([
+        getRemoteProgress(doc.id, authUserId),
+        getPreferences(authUserId),
+      ]).then(([progress, prefs]) => {
+        if (prefs) {
+          if (typeof prefs.font_size === "number") setFontSize(prefs.font_size);
+          if (prefs.theme) setTheme(prefs.theme);
+          if (prefs.show_progress_bar != null)
+            setShowProgressBar(!!prefs.show_progress_bar);
+          if (prefs.highlight_orp != null)
+            setHighlightOrp(!!prefs.highlight_orp);
+          if (prefs.auto_pause_images != null)
+            setAutoPauseImages(!!prefs.auto_pause_images);
+        }
+        if (progress && progress.word_index > 0) {
+          const idx = clampIndex(progress.word_index);
+          applyProgress(idx, progress.wpm);
+          lastSavedRef.current = idx;
+        }
+      });
+    } else {
+      queueMicrotask(() => {
+        const local = getLocalProgress(doc.slug);
+        if (local && local.index > 0) {
+          applyProgress(clampIndex(local.index), local.wpm);
+        }
+      });
+    }
+  }, [authUserId, doc.id, doc.slug, items.length]);
 
   const goTo = useCallback(
     (next: number) => {
@@ -246,7 +307,7 @@ export default function ReaderClient({
     const next = currentIndexRef.current + 1;
     if (next >= items.length) {
       setPlaying(false);
-      saveSessionRef.current(items.length - 1, wpmRef.current);
+      saveProgressRef.current(items.length - 1, wpmRef.current);
       return;
     }
     goTo(next);
@@ -300,7 +361,7 @@ export default function ReaderClient({
       return;
     }
     if (playingRef.current) {
-      saveSessionRef.current(currentIndexRef.current, wpmRef.current);
+      saveProgressRef.current(currentIndexRef.current, wpmRef.current);
     }
     setPlaying((p) => !p);
   }, [items, autoPauseImages, resume]);
@@ -359,11 +420,23 @@ export default function ReaderClient({
     setMenuOpen(false);
   }
 
+  function handleResumeAccept() {
+    if (!resumePrompt) return;
+    lastSavedRef.current = resumePrompt.index;
+    setResumePrompt(null);
+  }
+
+  function handleResumeDismiss() {
+    setCurrentIndex(0);
+    lastSavedRef.current = 0;
+    setResumePrompt(null);
+  }
+
   async function handleRename() {
     const next = renameValue.trim() || doc.title;
     setTitle(next);
     setRenaming(false);
-    if (!userId || next === doc.title) return;
+    if (!ownerId || next === doc.title) return;
     sendSafe(
       getSupabase()
         .from("documents")
@@ -373,7 +446,7 @@ export default function ReaderClient({
   }
 
   async function handleDelete() {
-    if (!userId) return;
+    if (!ownerId) return;
     setDeleting(true);
     try {
       await getSupabase().from("documents").delete().eq("id", doc.id);
@@ -391,7 +464,7 @@ export default function ReaderClient({
     <header className="sticky top-0 z-40 border-b border-black/10 bg-[var(--background)]/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-4xl items-center gap-3 px-4">
         <Link
-          href={userId ? "/library" : "/"}
+          href={authUserId ? "/library" : "/"}
           className="flex shrink-0 items-center gap-2 text-sm font-bold tracking-tight"
         >
           <BookOpen className="h-4 w-4 text-[#4F6EF6]" />
@@ -1019,6 +1092,37 @@ export default function ReaderClient({
       )}
 
       {shareModal}
+
+      {resumePrompt && (
+        <div className="fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
+          <div className="flex w-full max-w-sm items-center gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-2xl">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900">
+                Resume from word {resumePrompt.index.toLocaleString()}?
+              </p>
+              <p className="text-xs text-gray-500">
+                Pick up where you left off, or start from the top.
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-1.5">
+              <button
+                type="button"
+                onClick={handleResumeDismiss}
+                className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-black/5"
+              >
+                Start over
+              </button>
+              <button
+                type="button"
+                onClick={handleResumeAccept}
+                className="rounded-lg bg-[#4F6EF6] px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
+              >
+                Resume
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

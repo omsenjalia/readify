@@ -104,6 +104,7 @@ export default async function ReaderPage({
       items={items}
       isOwner={isOwner}
       isSignedIn={isSignedIn}
+      userId={user?.id ?? null}
       preferences={preferences}
       initialIndex={initialIndex}
       initialWpm={initialWpm}

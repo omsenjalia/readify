@@ -27,7 +27,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.theme-light):not(.theme-dark):not(.theme-sepia) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
