@@ -20,6 +20,7 @@ export type ReadingPreferences =
 export type DocumentWithProgress = Document & {
   word_index?: number;
   wpm?: number;
+  last_session_at?: string;
 };
 
 export interface WordBlock {

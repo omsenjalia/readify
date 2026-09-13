@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const IMAGE_BUCKET = "document-images";
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -15,60 +17,116 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: existing, error: fetchError } = await supabase
+  const { data: owned } = await supabase
     .from("documents")
-    .select("id, user_id")
+    .select("id")
     .eq("id", id)
+    .eq("user_id", user.id)
     .maybeSingle();
-
-  if (fetchError || !existing || existing.user_id !== user.id) {
+  if (!owned) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  let body: { visibility?: string; title?: string };
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const update: { visibility?: "private" | "public"; title?: string } = {};
-
-  if (body.visibility !== undefined) {
-    if (body.visibility !== "private" && body.visibility !== "public") {
-      return NextResponse.json(
-        { error: "visibility must be private or public" },
-        { status: 400 },
-      );
-    }
-    update.visibility = body.visibility;
+  const updates: Record<string, string | boolean> = {};
+  if (typeof body.title === "string" && body.title.trim()) {
+    updates.title = body.title.trim();
+  }
+  if (body.visibility === "public" || body.visibility === "private") {
+    updates.visibility = body.visibility;
+  }
+  if (typeof body.is_favorite === "boolean") {
+    updates.is_favorite = body.is_favorite;
+  }
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "No fields to update" },
+      { status: 400 },
+    );
   }
 
-  if (body.title !== undefined) {
-    const title = body.title.trim();
-    if (!title) {
-      return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
-    }
-    update.title = title;
-  }
-
-  if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-  }
-
-  const { data: doc, error } = await supabase
+  const { data, error } = await supabase
     .from("documents")
-    .update(update)
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .select("id, slug, title, visibility, word_count")
+    .eq("user_id", user.id)
+    .select()
     .single();
 
-  if (error || !doc) {
+  if (error || !data) {
     return NextResponse.json(
       { error: error?.message ?? "Failed to update document" },
       { status: 500 },
     );
   }
 
-  return NextResponse.json(doc);
+  return NextResponse.json(data);
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: owned } = await supabase
+    .from("documents")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!owned) {
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  const { data: objects, error: listError } = await supabase.storage
+    .from(IMAGE_BUCKET)
+    .list(id, { limit: 1000, offset: 0 });
+  if (listError) {
+    return NextResponse.json(
+      { error: listError.message },
+      { status: 500 },
+    );
+  }
+
+  if (objects && objects.length > 0) {
+    const paths = objects.map((o) => `${id}/${o.name}`);
+    const { error: rmError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .remove(paths);
+    if (rmError) {
+      return NextResponse.json(
+        { error: rmError.message },
+        { status: 500 },
+      );
+    }
+  }
+
+  const { error } = await supabase
+    .from("documents")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  return new NextResponse(null, { status: 204 });
 }
