@@ -1,3 +1,5 @@
+import io
+
 import mammoth
 
 
@@ -8,11 +10,15 @@ def extract_docx(file_path: str) -> list[dict]:
     re-joined so a multi-line block collapses into a single text column.
     """
     with open(file_path, "rb") as f:
-        result = mammoth.extract_raw_text(f)
+        return extract_docx_bytes(f.read())
+
+
+def extract_docx_bytes(data: bytes) -> list[dict]:
+    """Extract text blocks from raw DOCX bytes (skeleton variant)."""
+    result = mammoth.extract_raw_text(io.BytesIO(data))
     paragraphs = [
         p.strip() for p in result.value.split("\n\n") if p.strip()
     ]
-    blocks = [
+    return [
         {"type": "paragraph", "text": p.replace("\n", " ")} for p in paragraphs
     ]
-    return blocks

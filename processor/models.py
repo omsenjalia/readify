@@ -2,15 +2,22 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SourceType = Literal["pdf", "docx", "youtube", "text", "image"]
+SourceType = Literal["pdf", "docx", "youtube", "txt", "text", "image"]
 
 
 class ProcessRequest(BaseModel):
+    """Payload for POST /api/process.
+
+    One of ``storage_path`` (file-based), ``youtube_url`` (youtube), or
+    ``raw_text`` (txt/text) must describe the source.
+    """
+
+    document_id: str
     source_type: SourceType
-    document_id: str | None = None
     title: str | None = None
-    url: str | None = None
-    text: str | None = None
+    storage_path: str | None = None
+    youtube_url: str | None = None
+    raw_text: str | None = None
 
 
 class ProcessResponse(BaseModel):

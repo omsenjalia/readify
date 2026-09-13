@@ -126,26 +126,20 @@ export async function POST(request: NextRequest) {
       return;
     }
     try {
-      const form = new FormData();
-      form.append("source_type", sourceType);
-      form.append("document_id", doc.id);
-      form.append("title", resolvedTitle);
-      if (youtube_url) form.append("url", youtube_url);
-      if (raw_text) form.append("text", raw_text);
-
-      if (storage_path) {
-        const dl = await supabase.storage
-          .from("documents")
-          .download(storage_path);
-        if (dl.error) throw dl.error;
-        const name = storage_path.split("/").pop() ?? "document";
-        form.append("file", new File([dl.data], name));
-      }
-
       const res = await fetch(`${PROCESSOR_URL}/api/process`, {
         method: "POST",
-        headers: { "X-Processor-Secret": PROCESSOR_SECRET },
-        body: form,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${PROCESSOR_SECRET}`,
+        },
+        body: JSON.stringify({
+          document_id: doc.id,
+          source_type: sourceType,
+          title: resolvedTitle,
+          storage_path,
+          youtube_url,
+          raw_text,
+        }),
       });
       if (!res.ok) {
         console.error(
