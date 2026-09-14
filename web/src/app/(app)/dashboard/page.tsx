@@ -2,11 +2,42 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   FileText,
+  Heart,
   MonitorPlay,
+  Smartphone,
+  Star,
   Type,
   Upload,
+  Zap,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+
+function typeBadge(source: string) {
+  const s = (source || "").toLowerCase();
+  if (s === "pdf")
+    return (
+      <span className="rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+        PDF
+      </span>
+    );
+  if (s === "docx")
+    return (
+      <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+        DOCX
+      </span>
+    );
+  if (s === "youtube")
+    return (
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white">
+        <MonitorPlay className="h-3 w-3" />
+      </span>
+    );
+  return (
+    <span className="rounded bg-stone-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-stone-600">
+      Text
+    </span>
+  );
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -18,22 +49,19 @@ export default async function DashboardPage() {
   const { data: docs } = await supabase
     .from("documents")
     .select(
-      "id, slug, title, source_type, status, word_count, last_read_at, created_at",
+      "id, slug, title, source_type, status, word_count, last_read_at, is_favorite, created_at",
     )
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
-    .limit(6);
+    .limit(8);
 
   const recent = docs ?? [];
-  const name =
-    user.user_metadata?.full_name ||
-    user.email?.split("@")[0] ||
-    "there";
+  const resume = recent.find((d) => d.status === "ready") ?? recent[0];
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-10 md:px-6 md:pt-14">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-10 md:px-6 md:pt-12">
+      {/* Hero + upload */}
       <div className="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
-        {/* Left — editorial hero */}
         <div className="max-w-lg pt-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-600">
             Same content. Less time. More insight.
@@ -44,21 +72,18 @@ export default async function DashboardPage() {
             Think deeper.
           </h1>
           <p className="mt-5 text-[1.05rem] leading-relaxed text-[var(--muted)]">
-            Welcome back, {name}. Upload any document and speed-read it in your
-            browser.
+            Upload any document and speed-read it in your browser.
           </p>
-
           <div className="mt-7 flex flex-wrap gap-2">
             {["PDF", "DOCX", "YouTube", "Handwritten notes"].map((label) => (
               <span
                 key={label}
-                className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--foreground)] shadow-sm"
+                className="rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-xs font-medium text-[var(--foreground)] shadow-sm"
               >
                 {label}
               </span>
             ))}
           </div>
-
           <div className="mt-9">
             <Link
               href="/upload"
@@ -72,7 +97,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Right — upload card */}
         <div className="card-elevated overflow-hidden">
           <div className="border-b border-[var(--line)] px-6 pb-4 pt-6">
             <h2 className="text-base font-semibold text-[var(--ink)]">
@@ -83,11 +107,15 @@ export default async function DashboardPage() {
               experience.
             </p>
           </div>
-
           <div className="flex border-b border-[var(--line)] px-2 text-sm">
             {[
               { href: "/upload", label: "Document", icon: FileText, on: true },
-              { href: "/upload", label: "YouTube", icon: MonitorPlay, on: false },
+              {
+                href: "/upload",
+                label: "YouTube",
+                icon: MonitorPlay,
+                on: false,
+              },
               { href: "/upload", label: "Text", icon: Type, on: false },
             ].map((tab) => (
               <Link
@@ -104,11 +132,10 @@ export default async function DashboardPage() {
               </Link>
             ))}
           </div>
-
           <div className="p-6">
             <Link
               href="/upload"
-              className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--surface-soft)] px-4 py-14 text-center transition hover:border-[var(--muted)] hover:bg-[#f7f3ec]"
+              className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--surface-soft)] px-4 py-14 text-center transition hover:border-[var(--muted)]"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#efeae1] text-[var(--muted)]">
                 <Upload className="h-5 w-5" strokeWidth={1.75} />
@@ -120,7 +147,6 @@ export default async function DashboardPage() {
                 PDF, DOCX, TXT, Markdown · Max 50MB
               </p>
             </Link>
-
             <Link
               href="/upload"
               className="mt-4 flex w-full items-center justify-center rounded-2xl bg-[var(--ink)] py-3.5 text-sm font-semibold text-white transition hover:bg-black"
@@ -131,73 +157,184 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Library preview */}
-      <section className="mt-16">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <h2 className="text-xl font-semibold tracking-tight text-[var(--ink)]">
-            Your library
-          </h2>
-          <Link
-            href="/library"
-            className="text-sm font-medium text-[var(--muted)] transition hover:text-[var(--ink)]"
-          >
-            View all →
-          </Link>
-        </div>
-
-        {recent.length === 0 ? (
-          <div className="card flex flex-col items-center justify-center border-dashed py-16 text-center">
-            <p className="text-sm text-[var(--muted)]">
-              Nothing yet —{" "}
+      {/* Library + resume preview */}
+      <section className="mt-16 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-semibold text-[var(--ink)]">
+              Your library
+            </h2>
+            <div className="ml-auto flex items-center gap-2">
+              <Link
+                href="/library"
+                className="hidden rounded-full border border-[var(--line)] bg-white px-4 py-2 text-sm text-[var(--muted)] shadow-sm sm:block"
+              >
+                Search your documents…
+              </Link>
               <Link
                 href="/upload"
-                className="font-semibold text-indigo-600 hover:underline"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-semibold text-white"
               >
+                <Upload className="h-3.5 w-3.5" />
+                Upload
+              </Link>
+            </div>
+          </div>
+
+          {recent.length === 0 ? (
+            <div className="card border-dashed py-16 text-center text-sm text-[var(--muted)]">
+              Nothing yet —{" "}
+              <Link href="/upload" className="font-semibold text-indigo-600">
                 upload something
               </Link>
               .
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {recent.map((d) => (
-              <div
-                key={d.id}
-                className="card flex items-center justify-between gap-3 px-5 py-4 transition hover:shadow-md"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--ink)]">
-                    {d.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-[var(--muted)]">
-                    {d.source_type}
-                    {d.word_count
-                      ? ` · ${d.word_count.toLocaleString()} words`
-                      : ""}
-                    {" · "}
-                    {d.status}
-                  </p>
-                </div>
-                {d.status === "ready" ? (
-                  <Link
-                    href={`/c/${d.slug}`}
-                    className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3.5 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:bg-[#efeae1]"
-                  >
-                    Read
-                  </Link>
-                ) : d.status === "error" ? (
-                  <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600">
-                    Error
-                  </span>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-[var(--surface-soft)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
-                    Processing
-                  </span>
-                )}
+            </div>
+          ) : (
+            <div className="card overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--line)] text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    <th className="px-4 py-3 font-semibold">Title</th>
+                    <th className="hidden px-3 py-3 font-semibold sm:table-cell">
+                      Type
+                    </th>
+                    <th className="hidden px-3 py-3 font-semibold md:table-cell">
+                      Words
+                    </th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recent.map((d) => (
+                    <tr
+                      key={d.id}
+                      className="border-b border-[var(--line)] last:border-0"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          {typeBadge(d.source_type)}
+                          <Link
+                            href={
+                              d.status === "ready" ? `/c/${d.slug}` : "/library"
+                            }
+                            className="font-medium text-[var(--ink)] hover:underline"
+                          >
+                            {d.title}
+                          </Link>
+                          {d.is_favorite ? (
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="hidden px-3 py-3 sm:table-cell">
+                        <span className="rounded-full bg-[var(--surface-soft)] px-2 py-0.5 text-xs text-[var(--muted)]">
+                          {d.source_type}
+                        </span>
+                      </td>
+                      <td className="hidden px-3 py-3 text-[var(--muted)] md:table-cell">
+                        {(d.word_count ?? 0).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        {d.status === "ready" ? (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            Ready
+                          </span>
+                        ) : d.status === "error" ? (
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600">
+                            Error
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[var(--muted)]">
+                            Processing
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Resume / focus card */}
+        <div className="card-elevated flex min-h-[280px] flex-col p-6">
+          {resume && resume.status === "ready" ? (
+            <>
+              <div>
+                <p className="text-sm font-semibold text-[var(--ink)]">
+                  {resume.title}
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {(resume.word_count ?? 0).toLocaleString()} words ·{" "}
+                  {resume.source_type}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="mt-auto flex flex-1 flex-col items-center justify-center py-8">
+                <p className="font-display text-4xl tracking-tight text-[var(--ink)]">
+                  <span className="text-[var(--muted)]/40">re</span>
+                  <span className="text-indigo-600">a</span>
+                  <span className="text-[var(--ink)]">d</span>
+                </p>
+                <p className="mt-6 text-[11px] text-[var(--muted)]">
+                  ← → or Space to play/pause
+                </p>
+              </div>
+              <Link
+                href={`/c/${resume.slug}`}
+                className="mt-2 flex w-full items-center justify-center rounded-full bg-[var(--ink)] py-2.5 text-sm font-semibold text-white hover:bg-black"
+              >
+                Continue reading
+              </Link>
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
+              <p className="font-display text-3xl text-[var(--ink)]">focus</p>
+              <p className="mt-3 text-sm text-[var(--muted)]">
+                Upload a document to start reading
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Quote + features */}
+      <section className="card mt-12 flex flex-col gap-8 p-6 md:flex-row md:items-center md:gap-12 md:p-8">
+        <p className="font-display max-w-xs text-2xl italic leading-snug text-[var(--ink)]">
+          &ldquo;A calmer mind for a deeper you.&rdquo;
+        </p>
+        <div className="grid flex-1 grid-cols-2 gap-6 sm:grid-cols-4">
+          {[
+            {
+              icon: Zap,
+              title: "Speed reading done right",
+              desc: "RSVP with optimal recognition points.",
+            },
+            {
+              icon: FileText,
+              title: "Multiple sources",
+              desc: "PDF, DOCX, YouTube, notes.",
+            },
+            {
+              icon: Smartphone,
+              title: "Works on all your devices",
+              desc: "Read anywhere.",
+            },
+            {
+              icon: Heart,
+              title: "A calmer, more focused you",
+              desc: "Deep reading without the noise.",
+            },
+          ].map((f) => (
+            <div key={f.title}>
+              <f.icon className="h-4 w-4 text-indigo-500" strokeWidth={1.75} />
+              <p className="mt-2 text-xs font-semibold text-[var(--ink)]">
+                {f.title}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">{f.desc}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );

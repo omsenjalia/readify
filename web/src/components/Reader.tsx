@@ -600,7 +600,7 @@ export default function ReaderClient({
                         />
                         <div className="my-1 border-t border-black/10" />
                         <MenuItem
-                          icon={<Trash2 className="h-4 w-4 text-red-600" />}
+                          icon={<Trash2 className="h-4 w-4 text-indigo-600" />}
                           label="Delete"
                           danger
                           onClick={() => {
@@ -832,11 +832,11 @@ export default function ReaderClient({
 
             <div className="relative flex w-full items-center justify-center">
               <div
-                className="absolute inset-y-[-14px] w-px bg-red-400/30"
+                className="absolute inset-y-[-14px] w-px bg-indigo-400/25"
                 style={{ left: `calc(50% - ${orpWidth / 2}px)` }}
               />
               <div
-                className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#ef4444]"
+                className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#4f46e5]"
                 style={{ left: `calc(50% - 2px)` }}
               />
               <div
@@ -1232,7 +1232,7 @@ function MenuItem({
       onClick={onClick}
       className={clsx(
         "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition",
-        danger ? "text-red-600 hover:bg-red-50" : "hover:bg-black/5",
+        danger ? "text-indigo-600 hover:bg-red-50" : "hover:bg-black/5",
       )}
     >
       {icon}
