@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
+import { chunkWords, tokenizeText } from "@/lib/tokenize";
 
 const PROCESSOR_URL = process.env.PROCESSOR_URL;
 const PROCESSOR_SECRET = process.env.PROCESSOR_SECRET;
@@ -54,23 +55,9 @@ async function processTextInline(
   documentId: string,
   rawText: string,
 ): Promise<{ word_count: number }> {
-  const words = rawText
-    .replace(/\u00a0/g, " ")
-    .split(/\s+/)
-    .map((w) => w.trim())
-    .filter(Boolean);
-
-  // Chunk into ~paragraph-sized blocks for the reader
-  const paragraphs: string[][] = [];
-  let buf: string[] = [];
-  for (const w of words) {
-    buf.push(w);
-    if (buf.length >= 80) {
-      paragraphs.push(buf);
-      buf = [];
-    }
-  }
-  if (buf.length) paragraphs.push(buf);
+  // Unicode-aware tokenization (Hindi, Gujarati, etc. — not ASCII \w)
+  const words = tokenizeText(rawText);
+  const paragraphs = chunkWords(words, 80);
 
   await supabase
     .from("content_blocks")

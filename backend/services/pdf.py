@@ -6,6 +6,7 @@ import pymupdf
 
 from db import get_supabase
 from services.ocr import ocr_page_image
+from services.text_service import tokenize_words
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ async def extract_pdf_blocks(
 
             if has_text:
                 blocks.append(
-                    {"type": "text", "words": [w for w in text.split() if w]}
+                    {"type": "text", "words": tokenize_words(text)}
                 )
 
             if has_text:
@@ -130,7 +131,7 @@ def _ocr_result_block(page_num: int, result: object) -> dict:
         logger.warning("OCR returned empty text for page %d", page_num)
         return {"type": "text", "words": ["[Page could not be read]"]}
 
-    words = text.split()
+    words = tokenize_words(text)
     logger.info(
         "OCR page %d: %d words in %.2fs",
         page_num,

@@ -38,14 +38,17 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-geist-sans), var(--font-noto-deva), var(--font-noto-guj),
+    "Noto Sans Devanagari", "Noto Sans Gujarati", "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Latin (Geist) + Devanagari + Gujarati so Hindi/Gujarati render correctly */
+  font-family: var(--font-geist-sans), var(--font-noto-deva), var(--font-noto-guj),
+    "Noto Sans Devanagari", "Noto Sans Gujarati", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
