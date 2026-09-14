@@ -46,13 +46,10 @@ async def extract_pdf_blocks(
       ``{"type": "image", "image_url": ...}``.
     - An image-only (scanned) page has its full page rendered at 2x scale,
       uploaded the same way, and emitted as an image block flagged
-      ``needs_ocr=True``. The rendered PNG is then sent to the GGUF OCR
-      server; the resulting text replaces the ``[Scanned page]``
-      placeholder. Pages the OCR server cannot read fall back to
-      ``[Page could not be read]`` rather than failing the whole document.
-
-    OCR runs concurrently via ``asyncio.gather`` so multi-page scans are
-    transcribed in parallel; each page's duration is logged for debugging.
+      ``needs_ocr=True``. OCR is performed by the Nanonets DocStrange API
+      (``DOCSTRANGE_API_KEY``). Multi-page scans are sent as a single PDF
+      when possible; otherwise each page image is OCRed. Failures fall back
+      to ``[Page could not be read]`` rather than failing the whole document.
     """
     blocks: list[dict] = []
     supabase = get_supabase()
@@ -101,10 +98,52 @@ async def extract_pdf_blocks(
 
     if ocr_tasks:
         if progress_cb:
-            await progress_cb(f"Running OCR on {len(ocr_tasks)} pages…")
-        logger.info("Running OCR on %d pages", len(ocr_tasks))
+            await progress_cb(
+                f"Running DocStrange OCR on {len(ocr_tasks)} scanned page(s)…"
+            )
+        logger.info("DocStrange OCR for %d scanned pages", len(ocr_tasks))
+
+        # Prefer one full-PDF call when multiple pages need OCR (better layout).
+        if len(ocr_tasks) >= 2:
+            try:
+                from services.ocr import ocr_pdf_bytes
+
+                full_text = await ocr_pdf_bytes(file_bytes)
+                if full_text and full_text.strip():
+                    # Replace all scanned placeholders with a single text stream
+                    words = tokenize_words(full_text)
+                    # Keep image blocks; collapse OCR text into first placeholder
+                    first_idx = ocr_tasks[0][1]
+                    blocks[first_idx] = {"type": "text", "words": words}
+                    for _, text_block_idx, _ in ocr_tasks[1:]:
+                        blocks[text_block_idx] = {
+                            "type": "text",
+                            "words": [],
+                        }
+                    # Drop empty text blocks
+                    blocks = [
+                        b
+                        for b in blocks
+                        if not (
+                            b.get("type") == "text"
+                            and not (b.get("words") or [])
+                        )
+                    ]
+                    logger.info(
+                        "DocStrange full-PDF OCR: %d words", len(words)
+                    )
+                    return blocks
+            except Exception as exc:
+                logger.warning(
+                    "Full-PDF DocStrange OCR failed (%s); falling back to per-page",
+                    exc,
+                )
+
         results = await asyncio.gather(
-            *(ocr_page_image(img) for _, _, img in ocr_tasks),
+            *(
+                ocr_page_image(img, filename=f"page_{page_num}.png")
+                for page_num, _, img in ocr_tasks
+            ),
             return_exceptions=True,
         )
         for (page_num, text_block_idx, _), result in zip(

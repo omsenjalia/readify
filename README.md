@@ -13,7 +13,7 @@ RSVP speed reader with ORP (Optimal Recognition Point) character highlighting. U
 | Reader      | RSVP engine with ORP highlight (custom React component)    |
 | Backend     | Python 3.11+, FastAPI                                      |
 | Extraction  | PyMuPDF (PDF), Mammoth (DOCX), youtube-transcript-api      |
-| OCR         | External GGUF server via HTTP (optional)                   |
+| OCR         | [Nanonets DocStrange](https://docstrange.nanonets.com/docs/) API (scanned PDFs) |
 
 ## Project structure
 
@@ -85,8 +85,7 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 | `SUPABASE_URL`           | Yes      | Supabase project URL                                 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes   | Supabase service-role key                            |
 | `PROCESSOR_SECRET`       | Yes      | Same value as `PROCESSOR_SECRET` in `web/.env.local` |
-| `OCR_SERVER_URL`         | No       | External OCR endpoint (e.g. `https://ocr.example/ocr`) |
-| `OCR_SERVER_SECRET`      | No       | Bearer token for the OCR endpoint                    |
+| `DOCSTRANGE_API_KEY`     | No*      | Nanonets DocStrange key for scanned PDF OCR (`NANONETS_API_KEY` also accepted). *Required only for image-only PDFs |
 
 ## Supabase setup
 
@@ -115,26 +114,26 @@ Browser  --->  web (Next.js :3000)  -- POST /api/documents -->  backend (:8001) 
    |                     |                                          |
    |               Supabase Auth                           Supabase Postgres
    |              + Postgres                                       |
-   |                     |                                 Optional OCR server
-   +---------------------+                                  (GGUF, /ocr)
+   |                     |                                 DocStrange OCR API
+   +---------------------+                                  (Nanonets)
 ```
 
 - **web** authenticates the user via Supabase Auth, writes the document row to Postgres, then tells the backend to extract text via `POST /api/process`.
 - **backend** downloads the source file from Supabase Storage (or receives raw text / a YouTube URL), extracts text blocks, writes them back to Postgres, and returns the job status.
 - **OCR server** (optional): called by the backend when a content block has `needs_ocr: true`.
 
-### OCR server contract
+### OCR (DocStrange)
 
+Scanned / image-only PDF pages are sent to Nanonets DocStrange:
+
+```bash
+# backend/.env
+DOCSTRANGE_API_KEY=your_key_here
 ```
-POST <OCR_SERVER_URL>
-Content-Type: application/json
-Authorization: Bearer <OCR_SERVER_SECRET>
 
-{ "image_base64": "<base64-encoded image>" }
+Docs: https://docstrange.nanonets.com/docs/
 
--> 200 OK
-{ "text": "extracted text...", "confidence": 0.92 }
-```
+Digital (text-layer) PDFs still use PyMuPDF only — no OCR call.
 
 ## Deploy to Vercel (frontend)
 
