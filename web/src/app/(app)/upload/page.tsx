@@ -282,11 +282,11 @@ export default function UploadPage() {
   const doneCount = pendingDocs.filter((d) => d.status !== "processing").length;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+    <div className="mx-auto w-full max-w-2xl px-4 py-10 md:py-14">
+      <h1 className="font-display text-3xl tracking-tight text-[var(--ink)]">
         Add to your library
       </h1>
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-2 text-sm text-[var(--muted)]">
         Upload a file (PDF, DOCX, TXT, Markdown), paste a YouTube link, or paste text / Markdown.
       </p>
 
@@ -323,7 +323,7 @@ export default function UploadPage() {
                   : "Processing your document…"}
               </p>
               {progressMsg && (
-                <p className="mt-1 text-sm text-gray-500">{progressMsg}</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">{progressMsg}</p>
               )}
             </div>
           ) : (
@@ -431,7 +431,7 @@ export default function UploadPage() {
               <button
                 type="submit"
                 disabled={phase === "uploading"}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition hover:from-indigo-700 hover:to-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--ink)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {phase === "uploading" && (
                   <Loader2 className="h-4 w-4 animate-spin" />

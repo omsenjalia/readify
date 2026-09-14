@@ -121,7 +121,7 @@ export default function DragDrop({
           "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors",
           dragging
             ? "border-indigo-500 bg-indigo-50"
-            : "border-gray-300 hover:border-indigo-400 hover:bg-gray-50",
+            : "border-[var(--line-strong)] hover:border-indigo-400 hover:bg-[var(--surface-soft)]",
           "cursor-pointer",
         )}
       >
@@ -131,10 +131,10 @@ export default function DragDrop({
             dragging ? "text-indigo-500" : "text-gray-400",
           )}
         />
-        <p className="text-sm font-medium text-gray-700">
+        <p className="text-sm font-medium text-[var(--foreground)]">
           Drop your files here or click to browse
         </p>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-[var(--muted)]">
           Supported: PDF, DOCX, TXT, EPUB — Max 50MB each — Up to{" "}
           {maxFiles} files
         </p>
@@ -163,13 +163,13 @@ export default function DragDrop({
           {selected.map((file, i) => (
             <li
               key={`${file.name}-${i}`}
-              className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
+              className="flex items-center justify-between rounded-lg bg-[var(--surface-soft)] px-3 py-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-700">
+                <p className="truncate text-sm font-medium text-[var(--foreground)]">
                   {file.name}
                 </p>
-                <p className="text-xs text-gray-500">{formatSize(file.size)}</p>
+                <p className="text-xs text-[var(--muted)]">{formatSize(file.size)}</p>
               </div>
               <button
                 type="button"

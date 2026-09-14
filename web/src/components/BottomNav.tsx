@@ -23,7 +23,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="grid grid-cols-5">
         {TABS.map((tab) => {
           const active = pathname === tab.href;
@@ -40,7 +40,7 @@ export default function BottomNav() {
                 <span className="flex h-12 w-12 -translate-y-2.5 items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30">
                   <Icon className="h-6 w-6" />
                 </span>
-                <span className="text-[10px] font-medium text-gray-500">
+                <span className="text-[10px] font-medium text-[var(--muted)]">
                   {tab.label}
                 </span>
               </Link>
@@ -54,7 +54,7 @@ export default function BottomNav() {
               aria-label={tab.label}
               className={clsx(
                 "flex min-h-[56px] flex-col items-center justify-center gap-0.5 pb-1.5 pt-2",
-                active ? "font-semibold text-indigo-600" : "text-gray-400"
+                active ? "font-semibold text-indigo-600" : "text-[var(--muted)]"
               )}
             >
               <Icon className="h-6 w-6" />

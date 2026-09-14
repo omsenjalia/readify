@@ -66,7 +66,7 @@ function statusPill(status: StatusState) {
   switch (status.kind) {
     case "processing":
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-soft)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
           <Loader2 className="h-3 w-3 animate-spin" />
           Processing
         </span>
@@ -150,7 +150,7 @@ function SourceBadge({ type }: { type: string }) {
       </span>
     );
   }
-  return <AlignLeft className="h-4 w-4 shrink-0 text-gray-400" />;
+  return <AlignLeft className="h-4 w-4 shrink-0 text-[var(--muted)]" />;
 }
 
 function timeAgo(iso: string | null | undefined): string {
@@ -423,10 +423,10 @@ export default function LibraryTable({
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
             <Upload className="h-7 w-7 text-indigo-600" />
           </span>
-          <h2 className="mt-4 text-lg font-semibold text-gray-900">
+          <h2 className="mt-4 text-lg font-semibold text-[var(--ink)]">
             Your library is empty
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Upload a document or add a YouTube video to get started.
           </p>
           <Link
@@ -446,13 +446,13 @@ export default function LibraryTable({
       {/* Search & Upload */}
       <div className="flex items-center gap-3">
         <div className="relative w-2/5 min-w-[180px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your documents…"
-            className="w-full rounded-xl border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="w-full rounded-xl border border-gray-300 py-2 pl-9 pr-3 text-sm text-[var(--ink)] outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
           />
         </div>
         <Link
@@ -465,7 +465,7 @@ export default function LibraryTable({
       </div>
 
       {/* Filter tabs */}
-      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-gray-200">
+      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-[var(--line)]">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -474,12 +474,12 @@ export default function LibraryTable({
             className={clsx(
               "shrink-0 border-b-2 px-3 py-2.5 text-sm transition",
               activeTab === tab.id
-                ? "border-indigo-600 font-semibold text-gray-900"
-                : "border-transparent text-gray-400 hover:text-gray-600",
+                ? "border-indigo-600 font-semibold text-[var(--ink)]"
+                : "border-transparent text-[var(--muted)] hover:text-[var(--muted)]",
             )}
           >
             {tab.label}
-            <span className="ml-1 text-xs text-gray-400">
+            <span className="ml-1 text-xs text-[var(--muted)]">
               {counts[tab.id]}
             </span>
           </button>
@@ -487,10 +487,10 @@ export default function LibraryTable({
       </div>
 
       {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
         <table className="w-full text-left md:min-w-[720px]">
           <thead>
-            <tr className="border-b border-gray-200 text-xs font-medium uppercase tracking-wide text-gray-400">
+            <tr className="border-b border-[var(--line)] text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
               <th className="px-6 py-3">Title</th>
               <th className="hidden px-3 py-3 md:table-cell">Type</th>
               <th className="hidden px-3 py-3 md:table-cell">Words</th>
@@ -501,7 +501,7 @@ export default function LibraryTable({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map((doc) => (
-              <tr key={doc.id} className="group hover:bg-gray-50/70">
+              <tr key={doc.id} className="group hover:bg-[var(--surface-soft)]/70">
                 <td className="px-6 py-3.5">
                   <div className="flex items-center gap-3">
                     <SourceBadge type={doc.source_type} />
@@ -514,14 +514,14 @@ export default function LibraryTable({
                         onBlur={() => commitRename(doc)}
                         onKeyDown={(e) => handleKeyDown(e, doc)}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full rounded-lg border border-indigo-300 px-2 py-1 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        className="w-full rounded-lg border border-indigo-300 px-2 py-1 text-sm text-[var(--ink)] outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                       />
                     ) : (
                       <>
                         <button
                           type="button"
                           onClick={() => handleTitleClick(doc)}
-                          className="block min-w-0 flex-1 truncate text-left text-sm font-medium text-gray-900 transition hover:text-indigo-600"
+                          className="block min-w-0 flex-1 truncate text-left text-sm font-medium text-[var(--ink)] transition hover:text-indigo-600"
                           title={doc.title}
                         >
                           {doc.title}
@@ -553,14 +553,14 @@ export default function LibraryTable({
                   </div>
                 </td>
                 <td className="hidden px-3 py-3.5 md:table-cell">
-                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
+                  <span className="rounded-full bg-[var(--surface-soft)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
                     {TYPE_LABELS[doc.source_type] ?? "Text"}
                   </span>
                 </td>
-                <td className="hidden px-3 py-3.5 text-sm text-gray-500 md:table-cell">
+                <td className="hidden px-3 py-3.5 text-sm text-[var(--muted)] md:table-cell">
                   {(doc.word_count ?? 0).toLocaleString()}
                 </td>
-                <td className="hidden px-3 py-3.5 text-sm text-gray-500 md:table-cell">
+                <td className="hidden px-3 py-3.5 text-sm text-[var(--muted)] md:table-cell">
                   {timeAgo(doc.last_read_at ?? doc.last_session_at)}
                 </td>
                 <td className="px-3 py-3.5">{statusPill(statusOf(doc))}</td>
@@ -572,7 +572,7 @@ export default function LibraryTable({
                       onClick={() =>
                         setMenuId(menuId === doc.id ? null : doc.id)
                       }
-                      className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 opacity-100 transition hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 md:h-auto md:w-auto md:p-1.5 md:opacity-0 md:group-hover:opacity-100"
+                      className="flex h-11 w-11 items-center justify-center rounded-lg text-[var(--muted)] opacity-100 transition hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)] focus:opacity-100 md:h-auto md:w-auto md:p-1.5 md:opacity-0 md:group-hover:opacity-100"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
@@ -582,7 +582,7 @@ export default function LibraryTable({
                           className="fixed inset-0 z-10"
                           onClick={() => setMenuId(null)}
                         />
-                        <div className="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-gray-200 bg-white py-1.5 shadow-lg">
+                        <div className="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1.5 shadow-lg">
                           <MenuAction
                             icon={<BookOpen className="h-4 w-4" />}
                             label="Read"
@@ -603,7 +603,7 @@ export default function LibraryTable({
                               onClick={() => reprocess(doc)}
                             />
                           )}
-                          <div className="my-1 border-t border-gray-100" />
+                          <div className="my-1 border-t border-[var(--line)]" />
                           <MenuAction
                             icon={<Trash2 className="h-4 w-4" />}
                             label="Delete"
@@ -624,7 +624,7 @@ export default function LibraryTable({
         </table>
 
         {filtered.length === 0 && (
-          <div className="py-16 text-center text-sm text-gray-500">
+          <div className="py-16 text-center text-sm text-[var(--muted)]">
             No documents match your search.
           </div>
         )}
@@ -637,18 +637,18 @@ export default function LibraryTable({
             className="absolute inset-0 bg-black/50"
             onClick={() => setConfirmingId(null)}
           />
-          <div className="relative w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
-            <h3 className="text-base font-semibold text-gray-900">
+          <div className="relative w-full max-w-sm rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
+            <h3 className="text-base font-semibold text-[var(--ink)]">
               Delete document?
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-[var(--muted)]">
               Delete this document? This cannot be undone.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmingId(null)}
-                className="rounded-lg px-3.5 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+                className="rounded-lg px-3.5 py-2 text-sm font-medium text-[var(--muted)] transition hover:bg-[var(--surface-soft)]"
               >
                 Cancel
               </button>
@@ -691,7 +691,7 @@ function MenuAction({
         "flex w-full items-center gap-2.5 px-3 py-2 text-sm font-medium transition",
         danger
           ? "text-red-600 hover:bg-red-50"
-          : "text-gray-700 hover:bg-gray-50",
+          : "text-[var(--foreground)] hover:bg-[var(--surface-soft)]",
       )}
     >
       {icon}

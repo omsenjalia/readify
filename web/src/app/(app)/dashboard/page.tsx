@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  Check,
   FileText,
   MonitorPlay,
   Type,
@@ -23,7 +22,7 @@ export default async function DashboardPage() {
     )
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
-    .limit(8);
+    .limit(6);
 
   const recent = docs ?? [];
   const name =
@@ -32,155 +31,157 @@ export default async function DashboardPage() {
     "there";
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6">
-      <div className="grid gap-10 lg:grid-cols-[1.15fr_0.95fr] lg:items-start">
-        <div className="pt-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-10 md:px-6 md:pt-14">
+      <div className="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+        {/* Left — editorial hero */}
+        <div className="max-w-lg pt-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-indigo-600">
             Same content. Less time. More insight.
           </p>
-          <h1 className="font-display mt-4 text-4xl font-medium leading-[1.1] tracking-tight text-gray-950 md:text-5xl">
+          <h1 className="font-display mt-5 text-[2.75rem] leading-[1.08] text-[var(--ink)] md:text-[3.35rem]">
             Read faster.
             <br />
             Think deeper.
           </h1>
-          <p className="mt-4 max-w-md text-base text-gray-500">
+          <p className="mt-5 text-[1.05rem] leading-relaxed text-[var(--muted)]">
             Welcome back, {name}. Upload any document and speed-read it in your
             browser.
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-7 flex flex-wrap gap-2">
             {["PDF", "DOCX", "YouTube", "Handwritten notes"].map((label) => (
               <span
                 key={label}
-                className="rounded-full border border-[#e8e0d4] bg-white px-3 py-1 text-xs font-medium text-gray-600"
+                className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--foreground)] shadow-sm"
               >
                 {label}
               </span>
             ))}
           </div>
 
-          <div className="mt-8">
+          <div className="mt-9">
             <Link
               href="/upload"
-              className="inline-flex items-center gap-2 rounded-full bg-gray-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--ink)] px-7 py-3.5 text-sm font-semibold text-white shadow-md shadow-black/10 transition hover:bg-black"
             >
               Get started free
             </Link>
-            <p className="mt-2 text-xs text-gray-400">No credit card required.</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              No credit card required.
+            </p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#e8e0d4] bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-gray-900">
-            Upload a document
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Turn any document, video or note into a focused reading experience.
-          </p>
+        {/* Right — upload card */}
+        <div className="card-elevated overflow-hidden">
+          <div className="border-b border-[var(--line)] px-6 pb-4 pt-6">
+            <h2 className="text-base font-semibold text-[var(--ink)]">
+              Upload a document
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Turn any document, video or note into a focused reading
+              experience.
+            </p>
+          </div>
 
-          <div className="mt-5 flex gap-1 border-b border-gray-100 text-sm">
+          <div className="flex border-b border-[var(--line)] px-2 text-sm">
             {[
-              { href: "/upload", label: "Document", icon: FileText, active: true },
-              { href: "/upload", label: "YouTube", icon: MonitorPlay },
-              { href: "/upload", label: "Text", icon: Type },
+              { href: "/upload", label: "Document", icon: FileText, on: true },
+              { href: "/upload", label: "YouTube", icon: MonitorPlay, on: false },
+              { href: "/upload", label: "Text", icon: Type, on: false },
             ].map((tab) => (
               <Link
                 key={tab.label}
                 href={tab.href}
                 className={
-                  tab.active
-                    ? "flex items-center gap-1.5 border-b-2 border-gray-900 px-3 py-2.5 font-semibold text-gray-900"
-                    : "flex items-center gap-1.5 px-3 py-2.5 text-gray-400 transition hover:text-gray-700"
+                  tab.on
+                    ? "relative flex flex-1 items-center justify-center gap-1.5 px-2 py-3.5 font-semibold text-[var(--ink)] after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--ink)]"
+                    : "flex flex-1 items-center justify-center gap-1.5 px-2 py-3.5 text-[var(--muted)] transition hover:text-[var(--ink)]"
                 }
               >
-                <tab.icon className="h-3.5 w-3.5" />
+                <tab.icon className="h-3.5 w-3.5" strokeWidth={2} />
                 {tab.label}
               </Link>
             ))}
           </div>
 
-          <Link
-            href="/upload"
-            className="mt-5 flex flex-col items-center justify-center rounded-xl border border-dashed border-[#e0d6c8] bg-[#faf8f4] px-4 py-12 text-center transition hover:border-gray-400"
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f0ebe3] text-gray-500">
-              <Upload className="h-5 w-5" />
-            </span>
-            <p className="mt-3 text-sm font-medium text-gray-800">
-              Drop your file here or click to browse
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              PDF, DOCX, TXT, Markdown · Max 50MB
-            </p>
-          </Link>
+          <div className="p-6">
+            <Link
+              href="/upload"
+              className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--surface-soft)] px-4 py-14 text-center transition hover:border-[var(--muted)] hover:bg-[#f7f3ec]"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#efeae1] text-[var(--muted)]">
+                <Upload className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-[var(--ink)]">
+                Drop your file here or click to browse
+              </p>
+              <p className="mt-1.5 text-xs text-[var(--muted)]">
+                PDF, DOCX, TXT, Markdown · Max 50MB
+              </p>
+            </Link>
 
-          <Link
-            href="/upload"
-            className="mt-4 flex w-full items-center justify-center rounded-xl bg-gray-950 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
-          >
-            Upload
-          </Link>
+            <Link
+              href="/upload"
+              className="mt-4 flex w-full items-center justify-center rounded-2xl bg-[var(--ink)] py-3.5 text-sm font-semibold text-white transition hover:bg-black"
+            >
+              Upload
+            </Link>
+          </div>
         </div>
       </div>
 
-      <aside className="mt-8 rounded-2xl border border-[#e8e0d4] bg-white p-5">
-        <p className="text-sm font-medium text-gray-900">A smarter way to read.</p>
-        <ul className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm text-gray-600">
-          {[
-            "Upload any document",
-            "Focus on what matters",
-            "Read faster with ORP",
-            "Available on all devices",
-          ].map((t) => (
-            <li key={t} className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                <Check className="h-3 w-3" />
-              </span>
-              {t}
-            </li>
-          ))}
-        </ul>
-      </aside>
-
-      <div className="mt-12">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Your library</h2>
+      {/* Library preview */}
+      <section className="mt-16">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--ink)]">
+            Your library
+          </h2>
           <Link
             href="/library"
-            className="text-sm text-gray-500 transition hover:text-gray-900"
+            className="text-sm font-medium text-[var(--muted)] transition hover:text-[var(--ink)]"
           >
             View all →
           </Link>
         </div>
 
         {recent.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#e0d6c8] bg-white/60 py-14 text-center text-sm text-gray-500">
-            Nothing yet —{" "}
-            <Link href="/upload" className="font-semibold text-indigo-600">
-              upload something
-            </Link>
-            .
+          <div className="card flex flex-col items-center justify-center border-dashed py-16 text-center">
+            <p className="text-sm text-[var(--muted)]">
+              Nothing yet —{" "}
+              <Link
+                href="/upload"
+                className="font-semibold text-indigo-600 hover:underline"
+              >
+                upload something
+              </Link>
+              .
+            </p>
           </div>
         ) : (
-          <ul className="space-y-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {recent.map((d) => (
-              <li
+              <div
                 key={d.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[#e8e0d4] bg-white px-4 py-3"
+                className="card flex items-center justify-between gap-3 px-5 py-4 transition hover:shadow-md"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">
+                  <p className="truncate text-sm font-semibold text-[var(--ink)]">
                     {d.title}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {d.source_type} · {(d.word_count ?? 0).toLocaleString()} words
-                    · {d.status}
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
+                    {d.source_type}
+                    {d.word_count
+                      ? ` · ${d.word_count.toLocaleString()} words`
+                      : ""}
+                    {" · "}
+                    {d.status}
                   </p>
                 </div>
                 {d.status === "ready" ? (
                   <Link
                     href={`/c/${d.slug}`}
-                    className="shrink-0 rounded-full border border-[#e8e0d4] px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-[#faf8f4]"
+                    className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface-soft)] px-3.5 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:bg-[#efeae1]"
                   >
                     Read
                   </Link>
@@ -189,15 +190,15 @@ export default async function DashboardPage() {
                     Error
                   </span>
                 ) : (
-                  <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
+                  <span className="shrink-0 rounded-full bg-[var(--surface-soft)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
                     Processing
                   </span>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

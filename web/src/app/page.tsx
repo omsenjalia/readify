@@ -50,85 +50,85 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
-    redirect("/dashboard");
-  }
+  if (user) redirect("/dashboard");
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f7f8fc] text-gray-900">
-      <section className="relative flex flex-1 items-center overflow-hidden px-6 py-16 lg:py-24">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-14 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex min-h-screen flex-col bg-[#f7f8fc] text-stone-900">
+      <section className="relative flex flex-1 items-center overflow-hidden px-6 py-20 lg:py-28">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-16 lg:flex-row lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-[11px] font-semibold lowercase tracking-[0.22em] text-indigo-600">
+            <p className="text-[11px] font-semibold lowercase tracking-[0.24em] text-indigo-600">
               same content. less time. more insight.
             </p>
-            <h1 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight text-gray-950 lg:text-[3.75rem]">
+            <h1 className="mt-5 text-5xl font-bold leading-[1.02] tracking-tight text-stone-950 lg:text-[3.85rem]">
               Read faster.
               <br />
               Think deeper.
             </h1>
-            <p className="mt-5 text-lg leading-relaxed text-gray-500">
+            <p className="mt-5 text-lg leading-relaxed text-stone-500">
               Upload any document and speed-read it in your browser.
             </p>
 
-            <div className="mt-7 flex flex-wrap items-center gap-2">
-              {SOURCE_BADGES.map((badge) => (
+            <div className="mt-8 flex flex-wrap gap-2">
+              {SOURCE_BADGES.map((b) => (
                 <span
-                  key={badge.label}
-                  className="flex items-center gap-1.5 rounded-full border border-gray-200/80 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 shadow-sm"
+                  key={b.label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3.5 py-1.5 text-sm font-medium text-stone-700 shadow-sm"
                 >
-                  <badge.icon className="h-3.5 w-3.5 text-gray-400" />
-                  {badge.label}
+                  <b.icon className="h-3.5 w-3.5 text-stone-400" />
+                  {b.label}
                 </span>
               ))}
             </div>
 
-            <div className="mt-9">
+            <div className="mt-10">
               <Link
                 href="/signup"
-                className="inline-flex items-center gap-2 rounded-full bg-gray-950 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-gray-900/10 transition hover:bg-gray-800"
+                className="inline-flex items-center gap-2 rounded-full bg-stone-950 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-stone-900/15 transition hover:bg-stone-800"
               >
                 Get started free
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              <p className="mt-3.5 text-sm text-stone-400">
+                No credit card required.
+              </p>
             </div>
-            <p className="mt-3.5 text-sm text-gray-400">No credit card required.</p>
           </div>
 
-          <div className="relative hidden h-[340px] w-[280px] shrink-0 lg:block">
-            <div className="absolute inset-0 rotate-[4deg] rounded-3xl border border-gray-100 bg-white shadow-[0_25px_60px_-15px_rgba(15,23,42,0.12)]">
-              <div className="flex h-full flex-col gap-3 p-6">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
-                    <BookOpen className="h-4 w-4" />
+          <div className="relative hidden h-[360px] w-[300px] shrink-0 lg:block">
+            <div className="absolute inset-0 rotate-[5deg] rounded-[1.75rem] border border-stone-100 bg-white shadow-[0_30px_70px_-20px_rgba(15,23,42,0.18)]">
+              <div className="flex h-full flex-col gap-3.5 p-7">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
+                    <BookOpen className="h-4.5 w-4.5" />
                   </span>
                   <div className="flex-1 space-y-1.5">
-                    <div className="h-2.5 w-24 rounded-full bg-gray-100" />
-                    <div className="h-2 w-16 rounded-full bg-gray-50" />
+                    <div className="h-2.5 w-28 rounded-full bg-stone-100" />
+                    <div className="h-2 w-16 rounded-full bg-stone-50" />
                   </div>
                 </div>
-                {[90, 78, 85, 62, 70, 48].map((w, i) => (
+                {[92, 80, 88, 64, 74, 52, 68].map((w, i) => (
                   <div
                     key={i}
-                    className="h-2.5 rounded-full bg-gradient-to-r from-gray-100 to-gray-50"
+                    className="h-2.5 rounded-full bg-gradient-to-r from-stone-100 to-stone-50"
                     style={{ width: `${w}%` }}
                   />
                 ))}
-                <div className="mt-auto">
-                  <div className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 py-2.5 text-center text-xs font-semibold text-white shadow-md shadow-indigo-500/25">
+                <div className="mt-auto pt-2">
+                  <div className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 py-2.5 text-center text-xs font-semibold text-white shadow-lg shadow-indigo-500/30">
                     350 wpm
                   </div>
                 </div>
               </div>
             </div>
-            <div className="absolute -right-4 -top-3 z-10 rounded-2xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-lg">
-              <div className="flex items-center gap-2">
+            <div className="absolute -right-5 -top-4 z-10 rounded-2xl border border-stone-100 bg-white px-4 py-3 shadow-xl">
+              <div className="flex items-center gap-2.5">
                 <BarChart2 className="h-4 w-4 text-violet-500" />
                 <div>
-                  <div className="text-sm font-bold leading-none text-gray-900">
+                  <div className="text-sm font-bold leading-none text-stone-900">
                     +2.4x
                   </div>
-                  <div className="mt-0.5 text-[10px] text-gray-400">
+                  <div className="mt-0.5 text-[10px] text-stone-400">
                     reading speed
                   </div>
                 </div>
@@ -138,24 +138,22 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-gray-200/80 bg-white">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature) => (
-            <div key={feature.title} className="flex flex-col items-start gap-2">
-              <feature.icon className="h-5 w-5 text-indigo-500" strokeWidth={1.75} />
-              <h3 className="text-sm font-semibold text-gray-900">
-                {feature.title}
-              </h3>
-              <p className="text-sm leading-relaxed text-gray-500">
-                {feature.description}
+      <section className="border-t border-stone-200/80 bg-white">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-16 sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="flex flex-col gap-2">
+              <f.icon className="h-5 w-5 text-indigo-500" strokeWidth={1.75} />
+              <h3 className="text-sm font-semibold text-stone-900">{f.title}</h3>
+              <p className="text-sm leading-relaxed text-stone-500">
+                {f.description}
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="bg-[#f7f8fc] px-6 py-16 text-center">
-        <p className="font-display text-2xl italic tracking-tight text-gray-800 md:text-3xl">
+      <section className="bg-[#f7f8fc] px-6 py-20 text-center">
+        <p className="font-display text-2xl italic text-stone-800 md:text-3xl">
           &ldquo;A calmer mind for a deeper you.&rdquo;
         </p>
       </section>
