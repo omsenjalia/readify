@@ -316,7 +316,11 @@ async def process(
     )
 
 
-@router.get("/status/{job_id}", response_model=ProcessingStatus)
+@router.get(
+    "/status/{job_id}",
+    response_model=ProcessingStatus,
+    dependencies=[Depends(_secret_dep)],
+)
 async def status(job_id: str) -> ProcessingStatus:
     job = _get_status(job_id)
     if job is None:
