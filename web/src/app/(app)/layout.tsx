@@ -26,7 +26,7 @@ export default async function AppLayout(props: LayoutProps<"/">) {
     prefs?.theme === "dark" || prefs?.theme === "sepia" ? prefs.theme : null;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-[var(--background)]">
       {theme ? (
         <script
           dangerouslySetInnerHTML={{
