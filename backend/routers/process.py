@@ -127,10 +127,10 @@ def _block_words(block: dict) -> list[str]:
     if block.get("type") == "text":
         words = block.get("words")
         if words is None and block.get("text"):
-            words = block["text"].split()
+            words = text_service.tokenize_words(block["text"])
         return words or []
     if block.get("type") == "paragraph":
-        return (block.get("text") or "").split()
+        return text_service.tokenize_words(block.get("text") or "")
     return []
 
 
