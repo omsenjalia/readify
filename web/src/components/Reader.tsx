@@ -32,6 +32,9 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitAtORP } from "@/lib/orp";
+
+/** How long graphical figures pause the RSVP stream (not OCR). */
+const IMAGE_DWELL_MS = 3000;
 import {
   getLocalProgress,
   getRemoteProgress,
@@ -321,7 +324,7 @@ export default function ReaderClient({
       if (item?.kind === "image" && playingRef.current && autoPauseImages) {
         setPlaying(false);
         setImagePaused(true);
-        setImageRemaining(3500);
+        setImageRemaining(IMAGE_DWELL_MS);
       }
     },
     [items, autoPauseImages],
@@ -353,9 +356,9 @@ export default function ReaderClient({
     if (!imagePaused) return;
     const started = Date.now();
     const iv = setInterval(() => {
-      setImageRemaining(Math.max(0, 3500 - (Date.now() - started)));
+      setImageRemaining(Math.max(0, IMAGE_DWELL_MS - (Date.now() - started)));
     }, 200);
-    const t = setTimeout(resume, 3500);
+    const t = setTimeout(resume, IMAGE_DWELL_MS);
     return () => {
       clearInterval(iv);
       clearTimeout(t);
@@ -381,7 +384,7 @@ export default function ReaderClient({
     const item = items[currentIndexRef.current];
     if (item?.kind === "image" && autoPauseImages && !playingRef.current) {
       setImagePaused(true);
-      setImageRemaining(3500);
+      setImageRemaining(IMAGE_DWELL_MS);
       return;
     }
     if (playingRef.current) {
