@@ -36,30 +36,26 @@ async def extract_pdf_blocks(
 ) -> list[dict]:
     """Extract text and image blocks from a PDF byte stream.
 
-    Blocks come back in page order:
+    OCR policy (DocStrange is *not* used on normal digital PDFs):
 
-    - A page with substantial text emits
-      ``{"type": "text", "words": [...]}`` where ``words`` preserves the
-      tokenization the RSVP engine consumes.
-    - Embedded images on that page are extracted via PyMuPDF, converted to
-      PNG, uploaded to the ``document-images`` storage bucket and emitted as
-      ``{"type": "image", "image_url": ...}``.
-    - An image-only (scanned) page has its full page rendered at 2x scale,
-      uploaded the same way, and emitted as an image block flagged
-      ``needs_ocr=True``. The rendered PNG is then sent to the GGUF OCR
-      server; the resulting text replaces the ``[Scanned page]``
-      placeholder. Pages the OCR server cannot read fall back to
-      ``[Page could not be read]`` rather than failing the whole document.
+    - **Text page** (``page.get_text`` yields >20 chars): use the native
+      text layer only. Embedded figures are uploaded as image blocks for
+      the reader — they are never OCRed.
+    - **Image-only / scanned / handwritten page** (little or no text layer):
+      render the page and OCR via DocStrange. Fully scanned PDFs may use
+      one full-file DocStrange call; mixed PDFs OCR only the scanned pages.
 
-    OCR runs concurrently via ``asyncio.gather`` so multi-page scans are
-    transcribed in parallel; each page's duration is logged for debugging.
+    Failures fall back to ``[Page could not be read]`` without failing the
+    whole document.
     """
     blocks: list[dict] = []
     supabase = get_supabase()
     ocr_tasks: list[tuple[int, int, bytes]] = []
     doc = pymupdf.open(stream=file_bytes, filetype="pdf")
     try:
+        total_pages = doc.page_count
         for page_num, page in enumerate(doc, start=1):
+            # Native text layer — never OCR these pages (even if they embed images).
             text = page.get_text("text").strip()
             has_text = len(text) > 20
 
@@ -69,6 +65,8 @@ async def extract_pdf_blocks(
                 )
 
             if has_text:
+                # Figures on a text page: store as images for the reader.
+                # Do NOT OCR them — the page text already covers the content.
                 img_objects = page.get_images(full=True)
                 for img_idx, img in enumerate(img_objects, start=1):
                     pix = pymupdf.Pixmap(doc, img[0])
@@ -101,10 +99,54 @@ async def extract_pdf_blocks(
 
     if ocr_tasks:
         if progress_cb:
-            await progress_cb(f"Running OCR on {len(ocr_tasks)} pages…")
-        logger.info("Running OCR on %d pages", len(ocr_tasks))
+            await progress_cb(
+                f"Running DocStrange OCR on {len(ocr_tasks)} scanned page(s)…"
+            )
+        logger.info("DocStrange OCR for %d scanned pages", len(ocr_tasks))
+
+        # Prefer one full-PDF call only when *every* page is scanned.
+        # Mixed docs (text pages + a few scans) stay per-page so we never
+        # re-OCR pages that already have a text layer.
+        if len(ocr_tasks) >= 2 and len(ocr_tasks) == total_pages:
+            try:
+                from services.ocr import ocr_pdf_bytes
+
+                full_text = await ocr_pdf_bytes(file_bytes)
+                if full_text and full_text.strip():
+                    # Replace all scanned placeholders with a single text stream
+                    words = tokenize_words(full_text)
+                    # Keep image blocks; collapse OCR text into first placeholder
+                    first_idx = ocr_tasks[0][1]
+                    blocks[first_idx] = {"type": "text", "words": words}
+                    for _, text_block_idx, _ in ocr_tasks[1:]:
+                        blocks[text_block_idx] = {
+                            "type": "text",
+                            "words": [],
+                        }
+                    # Drop empty text blocks
+                    blocks = [
+                        b
+                        for b in blocks
+                        if not (
+                            b.get("type") == "text"
+                            and not (b.get("words") or [])
+                        )
+                    ]
+                    logger.info(
+                        "DocStrange full-PDF OCR: %d words", len(words)
+                    )
+                    return blocks
+            except Exception as exc:
+                logger.warning(
+                    "Full-PDF DocStrange OCR failed (%s); falling back to per-page",
+                    exc,
+                )
+
         results = await asyncio.gather(
-            *(ocr_page_image(img) for _, _, img in ocr_tasks),
+            *(
+                ocr_page_image(img, filename=f"page_{page_num}.png")
+                for page_num, _, img in ocr_tasks
+            ),
             return_exceptions=True,
         )
         for (page_num, text_block_idx, _), result in zip(
