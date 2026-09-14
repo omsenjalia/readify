@@ -30,7 +30,7 @@ const FEATURES = [
   {
     icon: FileText,
     title: "Multiple sources",
-    description: "PDF, DOCX, YouTube.",
+    description: "PDF, DOCX, YouTube, Markdown.",
   },
   {
     icon: Smartphone,
@@ -51,103 +51,86 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/library");
+    redirect("/dashboard");
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Hero */}
-      <section className="relative flex flex-1 items-center overflow-hidden px-6 py-20">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 lg:flex-row lg:items-center">
-          {/* Copy */}
+    <div className="flex min-h-screen flex-col bg-[#f7f8fc] text-gray-900">
+      <section className="relative flex flex-1 items-center overflow-hidden px-6 py-16 lg:py-24">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-14 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-xs font-semibold lowercase tracking-[0.2em] text-indigo-600">
-              Same content. Less time. More insight.
+            <p className="text-[11px] font-semibold lowercase tracking-[0.22em] text-indigo-600">
+              same content. less time. more insight.
             </p>
-            <h1 className="mt-4 text-5xl font-bold tracking-tight text-gray-900 lg:text-6xl">
+            <h1 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight text-gray-950 lg:text-[3.75rem]">
               Read faster.
               <br />
               Think deeper.
             </h1>
-            <p className="mt-4 text-lg text-gray-600">
+            <p className="mt-5 text-lg leading-relaxed text-gray-500">
               Upload any document and speed-read it in your browser.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-2">
+            <div className="mt-7 flex flex-wrap items-center gap-2">
               {SOURCE_BADGES.map((badge) => (
                 <span
                   key={badge.label}
-                  className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700"
+                  className="flex items-center gap-1.5 rounded-full border border-gray-200/80 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 shadow-sm"
                 >
-                  <badge.icon className="h-4 w-4 text-gray-500" />
+                  <badge.icon className="h-3.5 w-3.5 text-gray-400" />
                   {badge.label}
                 </span>
               ))}
             </div>
 
-            <div className="mt-8 flex items-center gap-4">
+            <div className="mt-9">
               <Link
                 href="/signup"
-                className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                className="inline-flex items-center gap-2 rounded-full bg-gray-950 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-gray-900/10 transition hover:bg-gray-800"
               >
                 Get started free
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <p className="mt-3 text-sm text-gray-500">
-              No credit card required.
-            </p>
+            <p className="mt-3.5 text-sm text-gray-400">No credit card required.</p>
           </div>
 
-          {/* Floating card stack (CSS only) */}
-          <div className="relative hidden h-80 w-64 shrink-0 lg:block">
-            <div className="absolute inset-0 -rotate-6 rounded-2xl border border-gray-200 bg-white shadow-lg">
-              <div className="flex h-full flex-col gap-3 p-5">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+          <div className="relative hidden h-[340px] w-[280px] shrink-0 lg:block">
+            <div className="absolute inset-0 rotate-[4deg] rounded-3xl border border-gray-100 bg-white shadow-[0_25px_60px_-15px_rgba(15,23,42,0.12)]">
+              <div className="flex h-full flex-col gap-3 p-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
                     <BookOpen className="h-4 w-4" />
                   </span>
-                  <div>
-                    <div className="h-2 w-20 rounded bg-gray-200" />
-                    <div className="mt-1 h-1.5 w-14 rounded bg-gray-100" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-2.5 w-24 rounded-full bg-gray-100" />
+                    <div className="h-2 w-16 rounded-full bg-gray-50" />
                   </div>
                 </div>
-                {[...Array(4)].map((_, i) => (
-                  <div key={i}>
-                    <div
-                      className="h-2 rounded bg-gray-200"
-                      style={{ width: `${[90, 80, 70, 60][i]}%` }}
-                    />
-                    <div className="mt-1.5 h-2 rounded bg-gray-100" style={{ width: `${[70, 60, 50, 40][i]}%` }} />
-                  </div>
+                {[90, 78, 85, 62, 70, 48].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-2.5 rounded-full bg-gradient-to-r from-gray-100 to-gray-50"
+                    style={{ width: `${w}%` }}
+                  />
                 ))}
-                <div className="mt-auto rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-1.5 text-center text-xs font-semibold text-white">
-                  350 wpm
-                </div>
-              </div>
-            </div>
-            <div className="absolute inset-y-0 left-10 top-4 z-[-1] -rotate-3 rounded-2xl border border-gray-200 bg-white shadow-lg">
-              <div className="flex h-full w-full flex-col gap-3 p-5">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-2.5 rounded bg-gray-200" style={{ width: `${[85, 65, 90, 55][i % 4]}%` }} />
-                ))}
-                <div className="mt-auto flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-sm font-semibold text-white">
-                    Y
-                  </span>
-                  <div>
-                    <div className="h-2 w-16 rounded bg-gray-200" />
-                    <div className="mt-1 h-1.5 w-10 rounded bg-gray-100" />
+                <div className="mt-auto">
+                  <div className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 py-2.5 text-center text-xs font-semibold text-white shadow-md shadow-indigo-500/25">
+                    350 wpm
                   </div>
                 </div>
               </div>
             </div>
-            <div className="absolute -right-6 -top-6 z-10 rotate-6 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-lg">
+            <div className="absolute -right-4 -top-3 z-10 rounded-2xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-lg">
               <div className="flex items-center gap-2">
-                <BarChart2 className="h-5 w-5 text-purple-600" />
+                <BarChart2 className="h-4 w-4 text-violet-500" />
                 <div>
-                  <div className="text-sm font-bold text-gray-900">+2.4x</div>
-                  <div className="text-[10px] text-gray-500">reading speed</div>
+                  <div className="text-sm font-bold leading-none text-gray-900">
+                    +2.4x
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-gray-400">
+                    reading speed
+                  </div>
                 </div>
               </div>
             </div>
@@ -155,41 +138,26 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Features strip */}
-      <section className="border-t border-gray-200 bg-white">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="border-t border-gray-200/80 bg-white">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((feature) => (
             <div key={feature.title} className="flex flex-col items-start gap-2">
-              <feature.icon className="h-5 w-5 text-indigo-600" />
+              <feature.icon className="h-5 w-5 text-indigo-500" strokeWidth={1.75} />
               <h3 className="text-sm font-semibold text-gray-900">
                 {feature.title}
               </h3>
-              <p className="text-sm text-gray-500">{feature.description}</p>
+              <p className="text-sm leading-relaxed text-gray-500">
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Pull quote + CTAs */}
-      <section className="flex flex-col items-center gap-6 bg-gray-50 px-6 py-16 text-center">
-        <p className="max-w-2xl text-2xl italic text-gray-800">
+      <section className="bg-[#f7f8fc] px-6 py-16 text-center">
+        <p className="font-display text-2xl italic tracking-tight text-gray-800 md:text-3xl">
           &ldquo;A calmer mind for a deeper you.&rdquo;
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-purple-700"
-          >
-            Sign up free
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
-          >
-            Log in
-          </Link>
-        </div>
       </section>
     </div>
   );
