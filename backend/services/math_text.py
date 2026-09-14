@@ -1,14 +1,4 @@
-"""Detect and preserve mathematical expressions as single RSVP tokens.
-
-Handles textbook edge cases from engineering PDFs:
-- Display equations: E = -N(d∅/dt)
-- Parenthetical: H (= NI/l), (V=IR)
-- Abbreviations: m.m.f., e.m.f.
-- Multi-term: Φ₁S₁ + Φ₂S₂ + Φ₃S₃
-- Proportionality / implication: ∝, ⟹, →
-- Comparison rows: Flux = … paired with Current = …
-- Greek / subscripts: μ₀ μᵣ Φ₁
-"""
+"""Detect and preserve mathematical expressions as single RSVP tokens."""
 
 from __future__ import annotations
 
@@ -24,10 +14,26 @@ _SYM = (
 _REPLACEMENTS = (
     ("\uf0b7", "•"),
     ("\u00a0", " "),
+    ("\u2022", "•"),
 )
 
-# LHS may include dots: m.m.f., e.m.f., Pe, Bmax, Φ₁S₁
 _LHS = r"(?:[A-Za-z" + _SYM + r"][A-Za-z0-9" + _SYM + r".]{0,16})"
+
+# Units often left as orphan tokens after formulas
+_UNIT = re.compile(
+    r"^(?:"
+    r"Wb(?:/m²|/m2)?|AT(?:/m)?|Watts?|V|A|Hz|H|T|N|m|mm|cm|kg|"
+    r"Wb/m\^?2|A/m²|A/m2|AT/m"
+    r")$",
+    re.I,
+)
+
+_DEF_LINE = re.compile(
+    r"^\s*"
+    + _LHS
+    + r"\s*=\s*"
+    r"[A-Za-z][A-Za-z\s,\-]{8,80}$"
+)
 
 
 def normalize_pdf_text(text: str) -> str:
@@ -56,7 +62,6 @@ _COMPARISON_ROW = re.compile(
 )
 
 _INLINE_PATTERNS = [
-    # S = l / μA (= l / μ₀ μᵣ A)  — equation with clarifying (=)
     re.compile(
         r"(?<![A-Za-z0-9])"
         + _LHS
@@ -66,7 +71,6 @@ _INLINE_PATTERNS = [
         r"[^)]{1,40}"
         r"\s*\)"
     ),
-    # H (= NI/l)
     re.compile(
         r"(?<![A-Za-z0-9])"
         + _LHS
@@ -74,7 +78,6 @@ _INLINE_PATTERNS = [
         r"([^)]{1,50})"
         r"\s*\)"
     ),
-    # (V=IR)
     re.compile(
         r"\("
         + _LHS
@@ -82,7 +85,6 @@ _INLINE_PATTERNS = [
         r"([A-Za-z0-9" + _SYM + r"\(\)\[\]\./\^\+\-\*·×÷±]+)"
         r"\)"
     ),
-    # Flux = m.m.f. / reluctance  |  Pe = Ke …
     re.compile(
         r"(?<![A-Za-z0-9])"
         + _LHS
@@ -93,7 +95,6 @@ _INLINE_PATTERNS = [
         r"(?:\s+[A-Za-z0-9" + _SYM + r"\(\)\[\]\./\^\+\-\*·×÷±]+){0,6}"
         r")"
     ),
-    # Multi-term sum without leading name: Φ₁S₁ + Φ₂S₂ + Φ₃S₃
     re.compile(
         r"(?<![A-Za-z0-9])"
         r"((?:[A-Za-z" + _SYM + r"][A-Za-z0-9" + _SYM + r"]{0,10}"
@@ -107,14 +108,29 @@ def is_math_token(token: str) -> bool:
     t = token.strip().rstrip(".,;")
     if len(t) < 3 or len(t) > 140:
         return False
+    if t.startswith("•"):
+        return False
     if any(op in t for op in ("=", "∝", "⟹", "⇒", "→", "⇔")):
         alpha_words = re.findall(r"\b[A-Za-z]{4,}\b", t)
-        if len(alpha_words) >= 5:
+        if len(alpha_words) >= 6:
             return False
         return True
     if "+" in t and any(c in t for c in _SYM):
         return True
     return False
+
+
+def is_definition_token(token: str) -> bool:
+    """Term = long English gloss (textbook definition lists)."""
+    t = token.strip()
+    if t.count("=") != 1:
+        return False
+    left, right = t.split("=", 1)
+    left, right = left.strip(), right.strip()
+    if len(left) > 24 or len(right) < 10:
+        return False
+    alpha = re.findall(r"\b[A-Za-z]{3,}\b", right)
+    return len(alpha) >= 2 and not any(c in right for c in "μΦ∅∫∑")
 
 
 def extract_math_segments(text: str) -> list[tuple[str, bool]]:
@@ -129,11 +145,22 @@ def extract_math_segments(text: str) -> list[tuple[str, bool]]:
         if not line:
             continue
 
+        # Bullets → keep marker with first few words as one soft unit
+        if line.startswith("•"):
+            body = line.lstrip("•").strip()
+            if body:
+                parts.append((f"• {body}", False))
+            continue
+
         m_cmp = _COMPARISON_ROW.match(line)
         if m_cmp:
             left = normalize_math_token(m_cmp.group(1))
             right = normalize_math_token(m_cmp.group(2))
             parts.append((f"{left}  ⇔  {right}", True))
+            continue
+
+        if _DEF_LINE.match(line):
+            parts.append((normalize_math_token(line), True))
             continue
 
         if _EQ_LINE.match(line):
@@ -144,7 +171,7 @@ def extract_math_segments(text: str) -> list[tuple[str, bool]]:
         for pat in _INLINE_PATTERNS:
             for m in pat.finditer(line):
                 frag = m.group(0).strip()
-                if len(re.findall(r"\b[A-Za-z]{4,}\b", frag)) >= 5:
+                if len(re.findall(r"\b[A-Za-z]{4,}\b", frag)) >= 6:
                     continue
                 matches.append((m.start(), m.end(), frag))
         matches.sort(key=lambda x: (x[0], -(x[1] - x[0])))
@@ -179,3 +206,16 @@ def normalize_math_token(expr: str) -> str:
     t = re.sub(r"\s*([=∝⟹⇒→⇔])\s*", r" \1 ", t)
     t = re.sub(r"\s+", " ", t)
     return t.strip()
+
+
+def glue_units(tokens: list[str]) -> list[str]:
+    """Attach orphan units (Wb/m², AT/m, Watts…) to the preceding math token."""
+    if not tokens:
+        return tokens
+    out: list[str] = []
+    for tok in tokens:
+        if out and _UNIT.match(tok.strip()) and is_math_token(out[-1]):
+            out[-1] = f"{out[-1]} {tok.strip()}"
+        else:
+            out.append(tok)
+    return out

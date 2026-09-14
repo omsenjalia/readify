@@ -3,6 +3,7 @@ import unicodedata
 
 from services.math_text import (
     extract_math_segments,
+    glue_units,
     is_math_token,
     normalize_math_token,
 )
@@ -25,6 +26,13 @@ def tokenize_words(text: str) -> list[str]:
             if tok:
                 out.append(tok)
             continue
+        # Keep bullet lines as one readable unit
+        s = segment.strip()
+        if s.startswith("•"):
+            body = s.lstrip("•").strip()
+            if body:
+                out.append(f"• {body}")
+            continue
         raw = re.split(r"\s+", segment.strip())
         for token in raw:
             if not token:
@@ -37,7 +45,7 @@ def tokenize_words(text: str) -> list[str]:
             piece = token[start:end]
             if piece:
                 out.append(piece)
-    return out
+    return glue_units(out)
 
 
 def token_is_math(token: str) -> bool:
