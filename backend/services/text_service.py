@@ -1,7 +1,6 @@
 import re
 import unicodedata
 
-
 _ZW = re.compile(r"[\u200b\u200c\u200d\ufeff]")
 
 
@@ -11,7 +10,7 @@ def _is_word_char(ch: str) -> bool:
 
 
 def tokenize_words(text: str) -> list[str]:
-    """Split text into RSVP tokens for spaced scripts (en, hi, gu, …)."""
+    """Split text into RSVP tokens for spaced scripts (en, hi, gu, ...)."""
     text = _ZW.sub("", text.replace("\u00a0", " "))
     raw = re.split(r"\s+", text.strip())
     out: list[str] = []
@@ -75,9 +74,7 @@ def extract_text(text: str) -> list[dict]:
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     if not paragraphs and text.strip():
         paragraphs = [text.strip()]
-    return [
-        {"type": "paragraph", "text": p.replace("\n", " ")} for p in paragraphs
-    ]
+    return [{"type": "paragraph", "text": p.replace("\n", " ")} for p in paragraphs]
 
 
 def paragraph_to_words(text: str) -> list[str]:
