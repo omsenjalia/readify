@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { prepareReadableText } from "@/lib/markdown";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 import {
@@ -92,7 +93,7 @@ export default function UploadPage() {
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
   const wordCount = textContent.trim()
-    ? textContent.trim().split(/\s+/).length
+    ? prepareReadableText(textContent).trim().split(/\s+/).filter(Boolean).length
     : 0;
 
   const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
@@ -199,6 +200,7 @@ export default function UploadPage() {
               source_type: "txt",
               raw_text: await file.text(),
               title: titleFromFilename(file.name),
+              format: ext === "md" ? "markdown" : "text",
             });
             if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
             created.push(await res.json());
@@ -232,6 +234,7 @@ export default function UploadPage() {
           source_type: "txt",
           raw_text: textContent,
           title: textTitle.trim(),
+          format: "text", // server still auto-detects Markdown syntax
         });
         if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
         created.push(await res.json());
@@ -278,7 +281,7 @@ export default function UploadPage() {
         Add to your library
       </h1>
       <p className="mt-1 text-sm text-gray-500">
-        Upload a file, paste a YouTube link, or write raw text.
+        Upload a file (PDF, DOCX, TXT, Markdown), paste a YouTube link, or write text / Markdown.
       </p>
 
       <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -387,7 +390,7 @@ export default function UploadPage() {
                     <textarea
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
-                      placeholder="Paste your text here…"
+                      placeholder="Paste plain text or Markdown (headings, lists, **bold** are cleaned for reading)…"
                       rows={8}
                       className="min-h-[200px] w-full resize-y rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />

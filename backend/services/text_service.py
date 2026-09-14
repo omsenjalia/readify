@@ -38,7 +38,8 @@ def tokenize_words(text: str) -> list[str]:
 
 
 def extract_text(text: str) -> list[dict]:
-    """Split pasted/plain text into paragraph blocks on blank lines."""
+    """Split pasted/plain text (or Markdown) into paragraph blocks."""
+    text = prepare_readable_text(text)
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     if not paragraphs and text.strip():
         paragraphs = [text.strip()]
@@ -49,3 +50,44 @@ def extract_text(text: str) -> list[dict]:
 
 def paragraph_to_words(text: str) -> list[str]:
     return tokenize_words(text)
+
+
+def _looks_like_markdown(text: str) -> bool:
+    sample = text[:4000]
+    signals = 0
+    for pat in (
+        r"^#{1,6}\s+\S",
+        r"\*\*[^*]+\*\*",
+        r"^\s*[-*+]\s+\S",
+        r"\[.+?\]\(.+?\)",
+        r"^```",
+        r"^>\s+\S",
+    ):
+        if re.search(pat, sample, re.M):
+            signals += 1
+    return signals >= 2 or bool(re.search(r"^#{1,6}\s+\S", sample, re.M))
+
+
+def markdown_to_plain(md: str) -> str:
+    """Strip common Markdown so RSVP tokens are words, not syntax."""
+    text = md.replace("\r\n", "\n")
+    text = re.sub(r"```[\w-]*\n([\s\S]*?)```", r"\n\1\n", text)
+    text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.M)
+    text = re.sub(r"^\s{0,3}>\s?", "", text, flags=re.M)
+    text = re.sub(r"^\s*[-*+]\s+", "", text, flags=re.M)
+    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.M)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"</?[^>]+>", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def prepare_readable_text(text: str, force_markdown: bool = False) -> str:
+    if force_markdown or _looks_like_markdown(text):
+        return markdown_to_plain(text)
+    return text
