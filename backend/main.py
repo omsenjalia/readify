@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Readify Processor", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Readify Backend", version="0.1.0", lifespan=lifespan)
 
 app.include_router(process_router.router, prefix="/api")
 

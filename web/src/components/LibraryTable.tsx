@@ -13,6 +13,7 @@ import {
   Pencil,
   Play,
   Search,
+  RefreshCw,
   Star,
   Trash2,
   Upload,
@@ -297,6 +298,97 @@ export default function LibraryTable({
     }
   }
 
+  async function reprocess(doc: DocumentWithProgress) {
+    setMenuId(null);
+    setDocs((ds) =>
+      ds.map((d) =>
+        d.id === doc.id
+          ? { ...d, status: "processing", error_msg: null }
+          : d,
+      ),
+    );
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/reprocess`, {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || "Reprocess failed");
+      }
+      toast.success("Reprocessing…");
+    } catch (err) {
+      setDocs((ds) =>
+        ds.map((d) =>
+          d.id === doc.id
+            ? {
+                ...d,
+                status: "error",
+                error_msg:
+                  err instanceof Error ? err.message : "Reprocess failed",
+              }
+            : d,
+        ),
+      );
+      toast.error(err instanceof Error ? err.message : "Reprocess failed");
+    }
+  }
+
+  
+  const processingIds = useMemo(
+    () =>
+      docs
+        .filter((d) => d.status === "processing")
+        .map((d) => d.id)
+        .sort()
+        .join(","),
+    [docs],
+  );
+
+  // Poll status for any docs stuck in processing (upload or retry).
+  useEffect(() => {
+    if (!processingIds) return;
+    const ids = processingIds.split(",");
+
+    let cancelled = false;
+    const tick = async () => {
+      const updates = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const res = await fetch(`/api/documents/${id}/status`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return {
+              id,
+              status: data.status as string,
+              error_msg: data.error_msg as string | null,
+            };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setDocs((ds) =>
+        ds.map((d) => {
+          const u = updates.find((x) => x && x.id === d.id);
+          if (!u) return d;
+          return {
+            ...d,
+            status: u.status as DocumentWithProgress["status"],
+            error_msg: u.error_msg,
+          };
+        }),
+      );
+    };
+
+    tick();
+    const timer = setInterval(tick, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [processingIds]);
+
   function handleTitleClick(doc: DocumentWithProgress) {
     if (editingId === doc.id) return;
     if (clickTimer.current) {
@@ -504,6 +596,13 @@ export default function LibraryTable({
                             label="Rename"
                             onClick={() => startRename(doc)}
                           />
+                          {doc.status === "error" && (
+                            <MenuAction
+                              icon={<RefreshCw className="h-4 w-4" />}
+                              label="Retry processing"
+                              onClick={() => reprocess(doc)}
+                            />
+                          )}
                           <div className="my-1 border-t border-gray-100" />
                           <MenuAction
                             icon={<Trash2 className="h-4 w-4" />}

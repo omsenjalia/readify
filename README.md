@@ -25,6 +25,10 @@ readify/
 └── .github/         CI workflows
 ```
 
+> **Naming:** the service lives in the `backend/` folder. Env vars still say
+> `PROCESSOR_URL` / `PROCESSOR_SECRET` because that is its role (extract text
+> from PDFs, DOCX, YouTube). Railway root directory = `backend`.
+
 ## Quick start
 
 ```bash
@@ -71,9 +75,8 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 | ------------------------------- | -------- | ----------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Yes      | Supabase project URL                            |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes      | Supabase anon/public key                        |
-| `SUPABASE_SERVICE_ROLE_KEY`     | Yes      | Supabase service-role key (server-side only)    |
-| `PROCESSOR_URL`                 | Yes      | Backend URL, e.g. `http://localhost:8001`       |
-| `PROCESSOR_SECRET`              | Yes      | Shared secret to authenticate with the backend  |
+| `PROCESSOR_URL`                 | Yes*     | Backend base URL, e.g. `http://localhost:8001` (*required for PDF/DOCX/YouTube; plain text works without it) |
+| `PROCESSOR_SECRET`              | Yes*     | Shared secret with `backend/.env` (same value)  |
 
 ### `backend/.env`
 
@@ -108,7 +111,7 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 ## Architecture
 
 ```
-Browser  --->  web (Next.js :3000)  -- POST /api/process -->  backend (:8001)
+Browser  --->  web (Next.js :3000)  -- POST /api/documents -->  backend (:8001) /api/process
    |                     |                                          |
    |               Supabase Auth                           Supabase Postgres
    |              + Postgres                                       |
