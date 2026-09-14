@@ -1,19 +1,34 @@
-// Optimal Recognition Point (ORP).
-//
-// The ORP is the character inside a word at which the eyes should rest so
-// the whole word can be recognized in a single fixation. Heuristics:
-//   - len <= 1: 0
-//   - len <= 5: 1
-//   - len <= 9: 2
-//   - len <= 13: 3
-//   - else: 4
+/**
+ * Optimal Recognition Point (ORP) — Unicode-aware.
+ * Uses grapheme clusters and Unicode letters so Devanagari / Gujarati highlight correctly.
+ */
+
+function graphemesOf(word: string): string[] {
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    try {
+      return [
+        ...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(
+          word,
+        ),
+      ].map((s) => s.segment);
+    } catch {
+      // fall through
+    }
+  }
+  return Array.from(word);
+}
+
+function isContentGrapheme(g: string): boolean {
+  return /\p{L}|\p{N}/u.test(g);
+}
 
 export function getORPIndex(word: string): number {
-  const len = word.replace(/\W/g, "").length;
-  if (len <= 1) return 0;
-  if (len <= 5) return 1;
-  if (len <= 9) return 2;
-  if (len <= 13) return 3;
+  const graphemes = graphemesOf(word);
+  const contentCount = graphemes.filter(isContentGrapheme).length;
+  if (contentCount <= 1) return 0;
+  if (contentCount <= 5) return 1;
+  if (contentCount <= 9) return 2;
+  if (contentCount <= 13) return 3;
   return 4;
 }
 
@@ -22,15 +37,28 @@ export function splitAtORP(word: string): {
   orp: string;
   after: string;
 } {
+  if (!word) return { before: "", orp: "", after: "" };
+
+  const graphemes = graphemesOf(word);
   const target = getORPIndex(word);
-  let count = 0;
-  for (let i = 0; i < word.length; i++) {
-    if (/\w/.test(word[i])) {
-      if (count === target) {
-        return { before: word.slice(0, i), orp: word[i], after: word.slice(i + 1) };
+
+  let contentSeen = 0;
+  for (let i = 0; i < graphemes.length; i++) {
+    if (isContentGrapheme(graphemes[i])) {
+      if (contentSeen === target) {
+        return {
+          before: graphemes.slice(0, i).join(""),
+          orp: graphemes[i],
+          after: graphemes.slice(i + 1).join(""),
+        };
       }
-      count++;
+      contentSeen++;
     }
   }
-  return { before: "", orp: word[0] ?? "", after: word.slice(1) };
+
+  return {
+    before: "",
+    orp: graphemes[0] ?? "",
+    after: graphemes.slice(1).join(""),
+  };
 }

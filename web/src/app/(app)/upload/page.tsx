@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { looksLikeMarkdown, prepareReadableText } from "@/lib/markdown";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 import {
@@ -28,7 +29,7 @@ interface PendingDoc {
 const TABS: { id: Tab; label: string; icon: LucideIcon; color: string }[] = [
   { id: "document", label: "Document", icon: FileText, color: "text-indigo-600" },
   { id: "youtube", label: "YouTube", icon: Play, color: "text-red-500" },
-  { id: "text", label: "Text", icon: AlignLeft, color: "text-gray-400" },
+  { id: "text", label: "Text / Markdown", icon: AlignLeft, color: "text-gray-400" },
 ];
 
 function extractVideoId(url: string): string | null {
@@ -91,8 +92,12 @@ export default function UploadPage() {
   // Text tab
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
+  const [treatAsMarkdown, setTreatAsMarkdown] = useState(true);
   const wordCount = textContent.trim()
-    ? textContent.trim().split(/\s+/).length
+    ? prepareReadableText(textContent, treatAsMarkdown)
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length
     : 0;
 
   const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
@@ -199,6 +204,7 @@ export default function UploadPage() {
               source_type: "txt",
               raw_text: await file.text(),
               title: titleFromFilename(file.name),
+              format: ext === "md" ? "markdown" : "text",
             });
             if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
             created.push(await res.json());
@@ -228,10 +234,13 @@ export default function UploadPage() {
         if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
         created.push(await res.json());
       } else {
+        const asMarkdown =
+          treatAsMarkdown || looksLikeMarkdown(textContent);
         const res = await postDocument({
           source_type: "txt",
           raw_text: textContent,
           title: textTitle.trim(),
+          format: asMarkdown ? "markdown" : "text",
         });
         if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
         created.push(await res.json());
@@ -278,7 +287,7 @@ export default function UploadPage() {
         Add to your library
       </h1>
       <p className="mt-1 text-sm text-gray-500">
-        Upload a file, paste a YouTube link, or write raw text.
+        Upload a file (PDF, DOCX, TXT, Markdown), paste a YouTube link, or paste text / Markdown.
       </p>
 
       <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -384,15 +393,36 @@ export default function UploadPage() {
                     />
                   </div>
                   <div>
+                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                      <label
+                        htmlFor="text-content"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Content
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={treatAsMarkdown}
+                          onChange={(e) => setTreatAsMarkdown(e.target.checked)}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Treat as Markdown
+                      </label>
+                    </div>
                     <textarea
+                      id="text-content"
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
-                      placeholder="Paste your text here…"
+                      placeholder="Paste plain text or Markdown — headings, lists, **bold**, links, and code fences are cleaned for speed reading…"
                       rows={8}
                       className="min-h-[200px] w-full resize-y rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                     />
                     <p className="mt-1.5 text-xs text-gray-500">
                       {new Intl.NumberFormat().format(wordCount)} words
+                      {treatAsMarkdown
+                        ? " · Markdown syntax will be stripped"
+                        : ""}
                     </p>
                   </div>
                 </>

@@ -21,13 +21,13 @@ export default function TopNav({ email }: { email: string }) {
   return (
     <>
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[#e8e0d4] bg-[var(--background)]/95 px-4 py-3 backdrop-blur md:hidden">
         <Link href="/library" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 text-sm font-bold text-white">
-            R
-          </span>
-          <span className="text-lg font-bold tracking-tight text-gray-900">
-            Readify
+          <span className="font-display text-xl font-semibold italic text-gray-900">
+            <span className="not-italic text-indigo-600">R</span>{" "}
+            <span className="font-sans text-base font-bold not-italic tracking-tight">
+              Readify
+            </span>
           </span>
         </Link>
         <button
@@ -100,14 +100,16 @@ export default function TopNav({ email }: { email: string }) {
       )}
 
       {/* Desktop top bar */}
-      <header className="sticky top-0 z-40 hidden border-b border-gray-200 bg-white/90 backdrop-blur md:block">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-6">
+      <header className="sticky top-0 z-40 hidden border-b border-[#e8e0d4] bg-[var(--background)]/90 backdrop-blur md:block">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-6">
           <Link
-            href="/library"
-            className="flex shrink-0 items-center gap-2 text-lg font-bold tracking-tight text-gray-900"
+            href="/dashboard"
+            className="flex shrink-0 items-center gap-2 tracking-tight text-gray-900"
           >
-            <BookOpen className="h-5 w-5 text-indigo-600" />
-            Readify
+            <span className="font-display text-2xl font-semibold italic text-indigo-600">
+              R
+            </span>
+            <span className="text-base font-bold">Readify</span>
           </Link>
 
           <nav className="flex items-center gap-1">
@@ -116,9 +118,8 @@ export default function TopNav({ email }: { email: string }) {
                 key={link.href}
                 href={link.href}
                 className={clsx(
-                  "px-3 py-2 text-sm font-medium text-gray-600 transition hover:text-gray-900",
-                  pathname === link.href &&
-                    "border-b-2 border-indigo-600 text-gray-900"
+                  "px-3 py-2 text-sm font-medium text-gray-500 transition hover:text-gray-900",
+                  pathname === link.href && "text-gray-900"
                 )}
               >
                 {link.label}
@@ -131,10 +132,13 @@ export default function TopNav({ email }: { email: string }) {
               onClick={() => setMenuOpen((v) => !v)}
               className="flex items-center gap-2 rounded-full px-2 py-1.5 transition hover:bg-gray-100"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-sm font-semibold text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ddd6fe] text-sm font-semibold text-indigo-800">
                 {initial}
               </span>
-              <ChevronDown className="h-4 w-4 text-gray-500" />
+              <span className="hidden max-w-[140px] truncate text-sm text-gray-600 lg:inline">
+                {email}
+              </span>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
             </button>
 
             {menuOpen && (

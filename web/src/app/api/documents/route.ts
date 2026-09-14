@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
+import { chunkWords, tokenizeText } from "@/lib/tokenize";
+import { prepareReadableText } from "@/lib/markdown";
 
 const PROCESSOR_URL = process.env.PROCESSOR_URL;
 const PROCESSOR_SECRET = process.env.PROCESSOR_SECRET;
@@ -53,24 +55,12 @@ async function processTextInline(
   supabase: any,
   documentId: string,
   rawText: string,
+  opts?: { forceMarkdown?: boolean },
 ): Promise<{ word_count: number }> {
-  const words = rawText
-    .replace(/\u00a0/g, " ")
-    .split(/\s+/)
-    .map((w) => w.trim())
-    .filter(Boolean);
-
-  // Chunk into ~paragraph-sized blocks for the reader
-  const paragraphs: string[][] = [];
-  let buf: string[] = [];
-  for (const w of words) {
-    buf.push(w);
-    if (buf.length >= 80) {
-      paragraphs.push(buf);
-      buf = [];
-    }
-  }
-  if (buf.length) paragraphs.push(buf);
+  // Pasted Text / .md: strip Markdown so RSVP shows words, not **bold**
+  const plain = prepareReadableText(rawText, opts?.forceMarkdown === true);
+  const words = tokenizeText(plain);
+  const paragraphs = chunkWords(words, 80);
 
   await supabase
     .from("content_blocks")
@@ -129,6 +119,8 @@ export async function POST(request: NextRequest) {
     youtube_url?: string;
     raw_text?: string;
     title?: string;
+    /** "markdown" forces MD stripping (Pasted Text toggle or .md file). */
+    format?: "text" | "markdown";
   };
   try {
     body = await request.json();
@@ -136,7 +128,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { source_type, storage_path, youtube_url, raw_text, title } = body;
+  const { source_type, storage_path, youtube_url, raw_text, title, format } =
+    body;
   const sourceType = PROCESSOR_TYPES[source_type];
   if (!sourceType) {
     return NextResponse.json(
@@ -204,7 +197,10 @@ export async function POST(request: NextRequest) {
 
   if (isText && raw_text) {
     try {
-      await processTextInline(supabase, doc.id, raw_text);
+      const forceMarkdown =
+        format === "markdown" ||
+        (typeof title === "string" && /\.md$/i.test(title.trim()));
+      await processTextInline(supabase, doc.id, raw_text, { forceMarkdown });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to process text";
