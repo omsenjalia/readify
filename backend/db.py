@@ -16,10 +16,15 @@ def get_supabase() -> Client:
     with _lock:
         if _client is None:
             url = os.environ.get("SUPABASE_URL")
-            key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+            # Prefer new sb_secret_ keys; fall back to legacy service_role JWT.
+            key = (
+                os.environ.get("SUPABASE_SECRET_KEY")
+                or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+            )
             if not url or not key:
                 raise RuntimeError(
-                    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required"
+                    "SUPABASE_URL and SUPABASE_SECRET_KEY "
+                    "(or SUPABASE_SERVICE_ROLE_KEY) are required"
                 )
             _client = create_client(url, key)
     return _client
