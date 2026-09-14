@@ -189,6 +189,8 @@ export async function POST(request: NextRequest) {
       title: resolvedTitle,
       source_type: sourceType,
       status: "processing",
+      storage_path: storage_path ?? null,
+      source_url: youtube_url ?? null,
     })
     .select("id, slug")
     .single();

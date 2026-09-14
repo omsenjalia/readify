@@ -96,6 +96,7 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
    - `20260913220000_add_needs_ocr.sql` — `content_blocks.needs_ocr` (scanned PDFs only; plain text never needs OCR)
    - `20260913220010_add_document_images_storage_policies.sql` — owner read/delete on extracted images
    - `20260914090000_content_blocks_owner_write_and_storage_cleanup.sql` — owner insert/update/delete on content_blocks (required for inline text uploads) + delete policy on private documents bucket
+   - `20260914100000_storage_path_and_private_images.sql` — `storage_path` / `source_url` columns; private `document-images` + select for document readers (signed URLs)
    - **CLI (preferred):** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
    - **SQL Editor:** run each file in timestamp order
    - Skipping later migrations is the most common cause of uploads ending in **Error**

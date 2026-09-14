@@ -85,7 +85,7 @@ export async function DELETE(
 
   const { data: owned } = await supabase
     .from("documents")
-    .select("id")
+    .select("id, storage_path")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -93,8 +93,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  // Best-effort cleanup of extracted images. Do not fail the whole delete
-  // if storage is momentarily unavailable — the DB row is the source of truth.
+  // Best-effort cleanup of extracted images + original upload.
+  // Never fail the whole delete on storage blips — DB row is source of truth.
   try {
     const { data: objects } = await supabase.storage
       .from(IMAGE_BUCKET)
@@ -104,7 +104,15 @@ export async function DELETE(
       await supabase.storage.from(IMAGE_BUCKET).remove(paths);
     }
   } catch {
-    // ignore storage cleanup errors
+    // ignore
+  }
+
+  if (owned.storage_path) {
+    try {
+      await supabase.storage.from(SOURCE_BUCKET).remove([owned.storage_path]);
+    } catch {
+      // ignore
+    }
   }
 
   const { error } = await supabase

@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import time
 
 import pymupdf
@@ -14,17 +13,19 @@ IMAGE_BUCKET = "document-images"
 
 
 def _upload_png(supabase, document_id: str, key: str, data: bytes) -> str:
-    """Upload a PNG to the public document-images bucket, return its URL."""
+    """Upload a PNG to the private document-images bucket.
+
+    Returns the *storage path* (``{document_id}/{key}.png``), not a public
+    URL. The web app issues short-lived signed URLs when rendering the reader
+    so private documents cannot be scraped by guessing object paths.
+    """
     path = f"{document_id}/{key}.png"
     supabase.storage.from_(IMAGE_BUCKET).upload(
         path,
         data,
         {"content-type": "image/png", "upsert": "true"},
     )
-    return (
-        f"{os.environ['SUPABASE_URL']}/storage/v1/object/public/"
-        f"{IMAGE_BUCKET}/{path}"
-    )
+    return path
 
 
 async def extract_pdf_blocks(

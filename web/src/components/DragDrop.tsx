@@ -12,6 +12,7 @@ const ACCEPT_MAP: Record<string, string[]> = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ],
   ".txt": ["text/plain"],
+  ".md": ["text/markdown", "text/plain"],
   ".epub": ["application/epub+zip"],
 };
 
@@ -29,7 +30,7 @@ function extAccepted(file: File, accept: string): boolean {
 
 export default function DragDrop({
   onFiles,
-  accept = ".pdf,.docx,.txt,.epub",
+  accept = ".pdf,.docx,.txt,.md,.epub",
   maxFiles = 5,
 }: {
   onFiles: (files: File[]) => void;

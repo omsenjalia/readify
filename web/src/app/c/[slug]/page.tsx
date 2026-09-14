@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getDocumentBySlug } from "@/lib/documents";
 import { flattenBlocks } from "@/lib/flatten";
+import { resolveImageUrl, signImageUrls } from "@/lib/images";
 import type {
   ContentBlock,
   Document,
@@ -67,7 +68,16 @@ export default async function ReaderPage({
     .eq("document_id", doc.id)
     .order("position", { ascending: true });
 
-  const items = flattenBlocks((blockRows ?? []) as ContentBlock[]);
+  const rawBlocks = (blockRows ?? []) as ContentBlock[];
+  const signed = await signImageUrls(
+    supabase,
+    rawBlocks.map((b) => b.image_url),
+  );
+  const items = flattenBlocks(rawBlocks).map((item) => {
+    if (item.kind !== "image") return item;
+    const url = resolveImageUrl(item.url, signed) ?? item.url;
+    return { ...item, url };
+  });
 
   let preferences: ReadingPreferences | null = null;
   let wordIndex: number | null = null;
