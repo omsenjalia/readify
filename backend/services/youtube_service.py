@@ -6,10 +6,22 @@ from youtube_transcript_api import YouTubeTranscriptApi
 def extract_video_id(url: str) -> str | None:
     """Pull a YouTube video id out of common URL shapes."""
     parsed = urlparse(url.strip())
-    if parsed.hostname in {"youtu.be"}:
+    host = (parsed.hostname or "").lower()
+    if host in {"youtu.be"}:
         return parsed.path.lstrip("/").split("/")[0] or None
-    if parsed.hostname in {"youtube.com", "www.youtube.com"}:
-        return parse_qs(parsed.query).get("v", [None])[0]
+    if host in {
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "music.youtube.com",
+    }:
+        qs = parse_qs(parsed.query).get("v", [None])[0]
+        if qs:
+            return qs
+        # /embed/ID, /shorts/ID, /live/ID
+        parts = [p for p in parsed.path.split("/") if p]
+        if len(parts) >= 2 and parts[0] in {"embed", "shorts", "live", "v"}:
+            return parts[1][:11] or None
     return None
 
 

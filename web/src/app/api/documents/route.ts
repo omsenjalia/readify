@@ -17,10 +17,12 @@ const PROCESSOR_TYPES: Record<UploadSourceType, string> = {
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
-    /(?:youtube\.com\/watch\?.*v=)([\w-]{11})/,
+    /(?:youtube\.com\/watch\?(?:.*&)?v=)([\w-]{11})/,
+    /(?:youtube\.com\/watch\?v=)([\w-]{11})/,
     /youtu\.be\/([\w-]{11})/,
     /youtube\.com\/embed\/([\w-]{11})/,
     /youtube\.com\/shorts\/([\w-]{11})/,
+    /youtube\.com\/live\/([\w-]{11})/,
   ];
   for (const p of patterns) {
     const m = url.match(p);
@@ -43,6 +45,81 @@ function defaultTitle(
     return name.replace(/\.[^.]+$/, "") || "Untitled";
   }
   return "Untitled";
+}
+
+/** Plain text / markdown never needs OCR — tokenize and persist in-process. */
+async function processTextInline(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  documentId: string,
+  rawText: string,
+): Promise<{ word_count: number }> {
+  const words = rawText
+    .replace(/\u00a0/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter(Boolean);
+
+  // Chunk into ~paragraph-sized blocks for the reader
+  const paragraphs: string[][] = [];
+  let buf: string[] = [];
+  for (const w of words) {
+    buf.push(w);
+    if (buf.length >= 80) {
+      paragraphs.push(buf);
+      buf = [];
+    }
+  }
+  if (buf.length) paragraphs.push(buf);
+
+  await supabase
+    .from("content_blocks")
+    .delete()
+    .eq("document_id", documentId);
+
+  if (paragraphs.length) {
+    const rows = paragraphs.map((pWords, position) => ({
+      document_id: documentId,
+      position,
+      type: "text",
+      words: pWords,
+    }));
+    const { error: insertError } = await supabase
+      .from("content_blocks")
+      .insert(rows);
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  const { error: updateError } = await supabase
+    .from("documents")
+    .update({
+      status: "ready",
+      word_count: words.length,
+      error_msg: null,
+      progress_msg: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", documentId);
+  if (updateError) throw new Error(updateError.message);
+
+  return { word_count: words.length };
+}
+
+async function markError(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  documentId: string,
+  message: string,
+) {
+  await supabase
+    .from("documents")
+    .update({
+      status: "error",
+      error_msg: message,
+      progress_msg: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", documentId);
 }
 
 export async function POST(request: NextRequest) {
@@ -101,6 +178,9 @@ export async function POST(request: NextRequest) {
   const resolvedTitle =
     title?.trim() || defaultTitle(source_type, storage_path, youtube_url);
 
+  // Text sources: insert as processing, then finish inline (no OCR / no processor).
+  const isText = sourceType === "text";
+
   const { data: doc, error } = await supabase
     .from("documents")
     .insert({
@@ -120,9 +200,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (isText && raw_text) {
+    try {
+      await processTextInline(supabase, doc.id, raw_text);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to process text";
+      await markError(supabase, doc.id, message);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { id: doc.id, slug: doc.slug, status: "ready" },
+      { status: 201 },
+    );
+  }
+
+  // PDF / DOCX / YouTube: hand off to the Python processor.
   after(async () => {
     if (!PROCESSOR_URL || !PROCESSOR_SECRET) {
       console.error("PROCESSOR_URL / PROCESSOR_SECRET not configured");
+      await markError(
+        supabase,
+        doc.id,
+        "Document processor is not configured. Set PROCESSOR_URL and PROCESSOR_SECRET.",
+      );
       return;
     }
     try {
@@ -142,14 +243,23 @@ export async function POST(request: NextRequest) {
         }),
       });
       if (!res.ok) {
-        console.error(
-          "processor returned",
-          res.status,
-          await res.text().catch(() => ""),
+        const detail = await res.text().catch(() => "");
+        console.error("processor returned", res.status, detail);
+        await markError(
+          supabase,
+          doc.id,
+          `Processor failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
         );
       }
     } catch (err) {
       console.error("Failed to notify processor:", err);
+      await markError(
+        supabase,
+        doc.id,
+        err instanceof Error
+          ? `Could not reach processor: ${err.message}`
+          : "Could not reach processor",
+      );
     }
   });
 

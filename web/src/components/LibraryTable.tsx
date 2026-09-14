@@ -43,7 +43,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 type StatusState =
   | { kind: "processing" }
-  | { kind: "error" }
+  | { kind: "error"; message?: string | null }
   | { kind: "completed" }
   | { kind: "reading"; pct: number }
   | { kind: "ready" };
@@ -52,7 +52,8 @@ function statusOf(doc: DocumentWithProgress): StatusState {
   const wordIndex = doc.word_index ?? 0;
   const total = doc.word_count ?? 0;
   if (doc.status === "processing") return { kind: "processing" };
-  if (doc.status === "error") return { kind: "error" };
+  if (doc.status === "error")
+    return { kind: "error", message: doc.error_msg };
   if (total > 0 && wordIndex >= total * 0.95) return { kind: "completed" };
   if (wordIndex > 0 && wordIndex < total) {
     return { kind: "reading", pct: pctComplete(wordIndex, total) };
@@ -71,7 +72,10 @@ function statusPill(status: StatusState) {
       );
     case "error":
       return (
-        <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600">
+        <span
+          title={status.message || "Processing failed"}
+          className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600"
+        >
           Error
         </span>
       );

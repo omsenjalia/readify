@@ -89,10 +89,15 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. Go to **Settings -> API** and copy the **Project URL**, **anon key**, and **service_role key**.
-3. Apply the schema:
-   - **SQL Editor:** paste `supabase/migrations/20260113120000_database_schema_and_rls.sql` and run it (creates tables, RLS policies, and the public `document-images` storage bucket).
-   - **CLI:** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
-   - **Direct:** `psql "$DATABASE_URL" -f supabase/migrations/20260113120000_database_schema_and_rls.sql`
+3. Apply **all** migrations under `supabase/migrations/` (not just the first file):
+   - `20260113120000_database_schema_and_rls.sql` — tables, RLS, public `document-images` bucket
+   - `20260913191431_add_progress_msg.sql` — `documents.progress_msg`
+   - `20260913191800_documents_storage_bucket.sql` — private `documents` upload bucket
+   - `20260913220000_add_needs_ocr.sql` — `content_blocks.needs_ocr` (scanned PDFs only; plain text never needs OCR)
+   - `20260913220010_add_document_images_storage_policies.sql` — owner read/delete on extracted images
+   - **CLI (preferred):** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
+   - **SQL Editor:** run each file in timestamp order
+   - Skipping later migrations is the most common cause of uploads ending in **Error**
 4. Regenerate TypeScript types after any schema change:
    ```bash
    cd web && npm run db:types
