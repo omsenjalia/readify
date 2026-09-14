@@ -65,8 +65,14 @@ async def extract_pdf_blocks(
                 )
 
             if has_text:
-                # Figures on a text page: store as images for the reader.
-                # Do NOT OCR them — the page text already covers the content.
+                # Figures on a text page: always store as images (3s dwell, no OCR
+                # of decorative charts). Exception: when the text layer is sparse
+                # and a large image holds the real content (equations, scanned
+                # fragments), OCR that image so math/text is not lost — while
+                # still showing the figure in the reader.
+                page_rect = page.rect
+                page_area = max(page_rect.width * page_rect.height, 1.0)
+                sparse_text = len(text) < 400
                 img_objects = page.get_images(full=True)
                 for img_idx, img in enumerate(img_objects, start=1):
                     pix = pymupdf.Pixmap(doc, img[0])
@@ -80,6 +86,22 @@ async def extract_pdf_blocks(
                         img_bytes,
                     )
                     blocks.append({"type": "image", "image_url": url})
+
+                    # Content-image recovery (textbook pages with formula images)
+                    try:
+                        img_area = float(pix.width * pix.height)
+                    except Exception:
+                        img_area = 0.0
+                    # pixmap is at image resolution; compare roughly to page
+                    large = img_area > page_area * 0.15
+                    if sparse_text and large and len(img_bytes) > 8_000:
+                        text_block_idx = len(blocks)
+                        blocks.append(
+                            {"type": "text", "words": ["[Figure text]"]}
+                        )
+                        ocr_tasks.append(
+                            (page_num, text_block_idx, img_bytes)
+                        )
             else:
                 # Scanned / image-only page. Render the page once and reuse
                 # the PNG for both the stored image block and the OCR pass.

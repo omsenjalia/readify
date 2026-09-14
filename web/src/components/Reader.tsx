@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitAtORP } from "@/lib/orp";
+import { isMathToken } from "@/lib/math";
 
 /** How long graphical figures pause the RSVP stream (not OCR). */
 const IMAGE_DWELL_MS = 3000;
@@ -834,47 +835,64 @@ export default function ReaderClient({
             </div>
 
             <div className="relative flex w-full items-center justify-center">
-              <div
-                className="absolute inset-y-[-14px] w-px bg-indigo-400/25"
-                style={{ left: `calc(50% - ${orpWidth / 2}px)` }}
-              />
-              <div
-                className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#4f46e5]"
-                style={{ left: `calc(50% - 2px)` }}
-              />
-              <div
-                className="relative flex"
-                style={{ fontSize, lineHeight: 1.1, fontWeight: 600 }}
-              >
-                <span
-                  style={{ width: sideWidth, textAlign: "right" }}
-                  className="whitespace-pre"
-                >
-                  {currentItem?.kind === "word"
-                    ? splitAtORP(currentItem.text).before
-                    : ""}
-                </span>
-                <span
+              {currentItem?.kind === "word" &&
+              isMathToken(currentItem.text) ? (
+                // Equations stay on one line — no ORP split mid-formula
+                <div
+                  className="max-w-full px-4 text-center font-semibold tracking-tight"
                   style={{
-                    width: orpWidth,
-                    textAlign: "center",
-                    fontWeight: highlightOrp ? 800 : 600,
-                    color: highlightOrp ? "#4F6EF6" : "inherit",
+                    fontSize: Math.min(fontSize, 42),
+                    lineHeight: 1.25,
+                    color: "var(--color-orp, #4f46e5)",
                   }}
                 >
-                  {currentItem?.kind === "word"
-                    ? splitAtORP(currentItem.text).orp
-                    : ""}
-                </span>
-                <span
-                  style={{ width: sideWidth, textAlign: "left" }}
-                  className="whitespace-pre"
-                >
-                  {currentItem?.kind === "word"
-                    ? splitAtORP(currentItem.text).after
-                    : ""}
-                </span>
-              </div>
+                  {currentItem.text}
+                </div>
+              ) : (
+                <>
+                  <div
+                    className="absolute inset-y-[-14px] w-px bg-indigo-400/25"
+                    style={{ left: `calc(50% - ${orpWidth / 2}px)` }}
+                  />
+                  <div
+                    className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#4f46e5]"
+                    style={{ left: `calc(50% - 2px)` }}
+                  />
+                  <div
+                    className="relative flex"
+                    style={{ fontSize, lineHeight: 1.1, fontWeight: 600 }}
+                  >
+                    <span
+                      style={{ width: sideWidth, textAlign: "right" }}
+                      className="whitespace-pre"
+                    >
+                      {currentItem?.kind === "word"
+                        ? splitAtORP(currentItem.text).before
+                        : ""}
+                    </span>
+                    <span
+                      style={{
+                        width: orpWidth,
+                        textAlign: "center",
+                        fontWeight: highlightOrp ? 800 : 600,
+                        color: highlightOrp ? "#4F6EF6" : "inherit",
+                      }}
+                    >
+                      {currentItem?.kind === "word"
+                        ? splitAtORP(currentItem.text).orp
+                        : ""}
+                    </span>
+                    <span
+                      style={{ width: sideWidth, textAlign: "left" }}
+                      className="whitespace-pre"
+                    >
+                      {currentItem?.kind === "word"
+                        ? splitAtORP(currentItem.text).after
+                        : ""}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div
