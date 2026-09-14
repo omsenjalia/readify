@@ -1,6 +1,13 @@
 import re
 import unicodedata
 
+from services.math_text import (
+    extract_math_segments,
+    glue_units,
+    is_math_token,
+    normalize_math_token,
+)
+
 _ZW = re.compile(r"[\u200b\u200c\u200d\ufeff]")
 
 
@@ -10,22 +17,39 @@ def _is_word_char(ch: str) -> bool:
 
 
 def tokenize_words(text: str) -> list[str]:
-    """Split text into RSVP tokens for spaced scripts (en, hi, gu, ...)."""
+    """Split text into RSVP tokens; keep math equations as single tokens."""
     text = _ZW.sub("", text.replace("\u00a0", " "))
-    raw = re.split(r"\s+", text.strip())
     out: list[str] = []
-    for token in raw:
-        if not token:
+    for segment, is_math in extract_math_segments(text):
+        if is_math:
+            tok = normalize_math_token(segment)
+            if tok:
+                out.append(tok)
             continue
-        start, end = 0, len(token)
-        while start < end and not _is_word_char(token[start]):
-            start += 1
-        while end > start and not _is_word_char(token[end - 1]):
-            end -= 1
-        piece = token[start:end]
-        if piece:
-            out.append(piece)
-    return out
+        # Keep bullet lines as one readable unit
+        s = segment.strip()
+        if s.startswith("•"):
+            body = s.lstrip("•").strip()
+            if body:
+                out.append(f"• {body}")
+            continue
+        raw = re.split(r"\s+", segment.strip())
+        for token in raw:
+            if not token:
+                continue
+            start, end = 0, len(token)
+            while start < end and not _is_word_char(token[start]):
+                start += 1
+            while end > start and not _is_word_char(token[end - 1]):
+                end -= 1
+            piece = token[start:end]
+            if piece:
+                out.append(piece)
+    return glue_units(out)
+
+
+def token_is_math(token: str) -> bool:
+    return is_math_token(token)
 
 
 def _looks_like_markdown(text: str) -> bool:

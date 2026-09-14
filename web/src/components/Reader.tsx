@@ -27,11 +27,20 @@ import {
   SkipBack,
   SkipForward,
   Trash2,
+  RefreshCw,
   Type,
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitAtORP } from "@/lib/orp";
+import {
+  formatMathDisplay,
+  isComparisonToken,
+  isDefinitionToken,
+  isMathToken,
+  mathDwellMs,
+  splitComparison,
+} from "@/lib/math";
 
 /** How long graphical figures pause the RSVP stream (not OCR). */
 const IMAGE_DWELL_MS = 3000;
@@ -117,6 +126,9 @@ export default function ReaderClient({
   );
   const [imagePaused, setImagePaused] = useState(false);
   const [imageRemaining, setImageRemaining] = useState(0);
+  const [mathPaused, setMathPaused] = useState(false);
+  const [mathRemaining, setMathRemaining] = useState(0);
+  const [mathDwell, setMathDwell] = useState(1800);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [wpmOpen, setWpmOpen] = useState(false);
@@ -137,6 +149,7 @@ export default function ReaderClient({
   const [renameValue, setRenameValue] = useState(doc.title);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
 
   const ownerId = isOwner ? doc.user_id : null;
   const authUserId = userId;
@@ -179,6 +192,7 @@ export default function ReaderClient({
   const playingRef = useRef(playing);
   const currentIndexRef = useRef(currentIndex);
   const imagePausedRef = useRef(imagePaused);
+  const mathPausedRef = useRef(mathPaused);
   const wpmRef = useRef(wpm);
   const lastSavedRef = useRef(initialIndex ?? 0);
   const progressLoadedRef = useRef(false);
@@ -219,6 +233,7 @@ export default function ReaderClient({
     playingRef.current = playing;
     currentIndexRef.current = currentIndex;
     imagePausedRef.current = imagePaused;
+    mathPausedRef.current = mathPaused;
     wpmRef.current = wpm;
     saveProgressRef.current = saveProgress;
   });
@@ -320,11 +335,25 @@ export default function ReaderClient({
     (next: number) => {
       const clamped = Math.min(items.length - 1, Math.max(0, next));
       setCurrentIndex(clamped);
+      setMathPaused(false);
+      setMathRemaining(0);
       const item = items[clamped];
       if (item?.kind === "image" && playingRef.current && autoPauseImages) {
         setPlaying(false);
         setImagePaused(true);
         setImageRemaining(IMAGE_DWELL_MS);
+        return;
+      }
+      if (
+        item?.kind === "word" &&
+        isMathToken(item.text) &&
+        playingRef.current
+      ) {
+        const dwell = mathDwellMs(item.text, wpmRef.current);
+        setMathDwell(dwell);
+        setPlaying(false);
+        setMathPaused(true);
+        setMathRemaining(dwell);
       }
     },
     [items, autoPauseImages],
@@ -349,6 +378,8 @@ export default function ReaderClient({
   const resume = useCallback(() => {
     setImagePaused(false);
     setImageRemaining(0);
+    setMathPaused(false);
+    setMathRemaining(0);
     setPlaying(true);
   }, []);
 
@@ -365,6 +396,20 @@ export default function ReaderClient({
     };
   }, [imagePaused, resume]);
 
+  useEffect(() => {
+    if (!mathPaused) return;
+    const started = Date.now();
+    const dwell = mathDwell;
+    const iv = setInterval(() => {
+      setMathRemaining(Math.max(0, dwell - (Date.now() - started)));
+    }, 200);
+    const t = setTimeout(resume, dwell);
+    return () => {
+      clearInterval(iv);
+      clearTimeout(t);
+    };
+  }, [mathPaused, mathDwell, resume]);
+
   const step = useCallback(
     (delta: number) => {
       goTo(currentIndexRef.current + delta);
@@ -377,7 +422,7 @@ export default function ReaderClient({
   }, []);
 
   const togglePlay = useCallback(() => {
-    if (imagePausedRef.current) {
+    if (imagePausedRef.current || mathPausedRef.current) {
       resume();
       return;
     }
@@ -385,6 +430,17 @@ export default function ReaderClient({
     if (item?.kind === "image" && autoPauseImages && !playingRef.current) {
       setImagePaused(true);
       setImageRemaining(IMAGE_DWELL_MS);
+      return;
+    }
+    if (
+      item?.kind === "word" &&
+      isMathToken(item.text) &&
+      !playingRef.current
+    ) {
+      const dwell = mathDwellMs(item.text, wpmRef.current);
+      setMathDwell(dwell);
+      setMathPaused(true);
+      setMathRemaining(dwell);
       return;
     }
     if (playingRef.current) {
@@ -478,6 +534,27 @@ export default function ReaderClient({
         .update({ title: next, updated_at: new Date().toISOString() })
         .eq("id", doc.id),
     );
+  }
+
+
+  async function handleReprocess() {
+    if (!isOwner || reprocessing) return;
+    setReprocessing(true);
+    setMenuOpen(false);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/reprocess`, {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || "Reprocess failed");
+      }
+      toast.success("Reprocessing… refresh shortly");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Reprocess failed");
+    } finally {
+      setReprocessing(false);
+    }
   }
 
   async function handleDelete() {
@@ -602,6 +679,11 @@ export default function ReaderClient({
                           onClick={() => openShare("visibility")}
                         />
                         <div className="my-1 border-t border-black/10" />
+                        <MenuItem
+                          icon={<RefreshCw className="h-4 w-4" />}
+                          label={reprocessing ? "Reprocessing…" : "Reprocess"}
+                          onClick={() => handleReprocess()}
+                        />
                         <MenuItem
                           icon={<Trash2 className="h-4 w-4 text-indigo-600" />}
                           label="Delete"
@@ -788,9 +870,11 @@ export default function ReaderClient({
             />
           </div>
           <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-            <span>{pct}% complete</span>
             <span>
-              {wordsLeft.toLocaleString()} words • {minsLeft} min left
+              {pct}% complete · {currentIndex + 1}/{items.length}
+            </span>
+            <span>
+              {wordsLeft.toLocaleString()} words · {minsLeft} min left
             </span>
           </div>
         </div>
@@ -834,47 +918,129 @@ export default function ReaderClient({
             </div>
 
             <div className="relative flex w-full items-center justify-center">
-              <div
-                className="absolute inset-y-[-14px] w-px bg-indigo-400/25"
-                style={{ left: `calc(50% - ${orpWidth / 2}px)` }}
-              />
-              <div
-                className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#4f46e5]"
-                style={{ left: `calc(50% - 2px)` }}
-              />
-              <div
-                className="relative flex"
-                style={{ fontSize, lineHeight: 1.1, fontWeight: 600 }}
-              >
-                <span
-                  style={{ width: sideWidth, textAlign: "right" }}
-                  className="whitespace-pre"
-                >
-                  {currentItem?.kind === "word"
-                    ? splitAtORP(currentItem.text).before
-                    : ""}
-                </span>
-                <span
-                  style={{
-                    width: orpWidth,
-                    textAlign: "center",
-                    fontWeight: highlightOrp ? 800 : 600,
-                    color: highlightOrp ? "#4F6EF6" : "inherit",
-                  }}
-                >
-                  {currentItem?.kind === "word"
-                    ? splitAtORP(currentItem.text).orp
-                    : ""}
-                </span>
-                <span
-                  style={{ width: sideWidth, textAlign: "left" }}
-                  className="whitespace-pre"
-                >
-                  {currentItem?.kind === "word"
-                    ? splitAtORP(currentItem.text).after
-                    : ""}
-                </span>
-              </div>
+              {currentItem?.kind === "word" &&
+              isMathToken(currentItem.text) ? (
+                <div className="flex w-full max-w-4xl flex-col items-center gap-2 px-4">
+                  {isComparisonToken(currentItem.text) &&
+                  splitComparison(currentItem.text) ? (
+                    // Stacked magnetic ⇔ electric comparison
+                    <div className="grid w-full gap-3 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-line bg-bg-elevated px-4 py-3 text-center">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                          Magnetic
+                        </p>
+                        <p
+                          className="font-semibold leading-snug"
+                          style={{
+                            fontSize: Math.min(fontSize * 0.85, 32),
+                            color: "var(--color-orp, #4f46e5)",
+                          }}
+                        >
+                          {formatMathDisplay(
+                            splitComparison(currentItem.text)!.left,
+                          )}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-line bg-bg-elevated px-4 py-3 text-center">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                          Electric
+                        </p>
+                        <p
+                          className="font-semibold leading-snug"
+                          style={{
+                            fontSize: Math.min(fontSize * 0.85, 32),
+                            color: "var(--color-orp, #4f46e5)",
+                          }}
+                        >
+                          {formatMathDisplay(
+                            splitComparison(currentItem.text)!.right,
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ) : isDefinitionToken(currentItem.text) ? (
+                    <div className="w-full max-w-xl rounded-2xl border border-line bg-bg-elevated px-5 py-4 text-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                        Definition
+                      </p>
+                      <p
+                        className="mt-1 font-semibold leading-snug"
+                        style={{
+                          fontSize: Math.min(fontSize * 0.8, 30),
+                          color: "var(--color-ink, inherit)",
+                        }}
+                      >
+                        {formatMathDisplay(currentItem.text)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className="max-w-full text-center font-semibold tracking-tight"
+                      style={{
+                        fontSize: Math.min(
+                          fontSize,
+                          Math.max(22, 52 - currentItem.text.length / 2.5),
+                        ),
+                        lineHeight: 1.3,
+                        color: "var(--color-orp, #4f46e5)",
+                      }}
+                    >
+                      {formatMathDisplay(currentItem.text)}
+                    </div>
+                  )}
+                  {mathPaused && (
+                    <p className="text-xs text-muted">
+                      Formula · resume in{" "}
+                      {Math.max(1, Math.round(mathRemaining / 1000))}s · Space
+                      to continue
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div
+                    className="absolute inset-y-[-14px] w-px bg-indigo-400/25"
+                    style={{ left: `calc(50% - ${orpWidth / 2}px)` }}
+                  />
+                  <div
+                    className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#4f46e5]"
+                    style={{ left: `calc(50% - 2px)` }}
+                  />
+                  <div
+                    className="relative flex"
+                    style={{ fontSize, lineHeight: 1.1, fontWeight: 600 }}
+                  >
+                    <span
+                      style={{ width: sideWidth, textAlign: "right" }}
+                      className="whitespace-pre"
+                    >
+                      {currentItem?.kind === "word"
+                        ? splitAtORP(currentItem.text).before
+                        : ""}
+                    </span>
+                    <span
+                      style={{
+                        width: orpWidth,
+                        textAlign: "center",
+                        fontWeight: highlightOrp ? 800 : 600,
+                        color: highlightOrp ? "#4F6EF6" : "inherit",
+                      }}
+                    >
+                      {currentItem?.kind === "word"
+                        ? splitAtORP(currentItem.text).orp
+                        : ""}
+                    </span>
+                    <span
+                      style={{ width: sideWidth, textAlign: "left" }}
+                      className="whitespace-pre"
+                    >
+                      {currentItem?.kind === "word"
+                        ? splitAtORP(currentItem.text).after
+                        : ""}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div
@@ -886,7 +1052,13 @@ export default function ReaderClient({
               }}
             >
               <span className="truncate">
-                {nextItem && nextItem.kind === "word" ? nextItem.text : ""}
+                {nextItem?.kind === "image"
+                  ? "↓ image next"
+                  : nextItem?.kind === "word" && isMathToken(nextItem.text)
+                    ? "↓ formula next"
+                    : nextItem?.kind === "word"
+                      ? nextItem.text
+                      : ""}
               </span>
             </div>
           </div>
