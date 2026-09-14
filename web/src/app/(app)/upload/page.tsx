@@ -32,11 +32,14 @@ const TABS: { id: Tab; label: string; icon: LucideIcon; color: string }[] = [
 ];
 
 function extractVideoId(url: string): string | null {
+  // Accept the common paste shape: youtube.com/watch?v=ID (no extra & before v=)
   const patterns = [
-    /youtube\.com\/watch\?.*[?&]v=([A-Za-z0-9_-]{11})/,
-    /youtu\.be\/([A-Za-z0-9_-]{11})/,
-    /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/watch\?(?:.*&)?v=)([\w-]{11})/,
+    /(?:youtube\.com\/watch\?v=)([\w-]{11})/,
+    /youtu\.be\/([\w-]{11})/,
+    /youtube\.com\/embed\/([\w-]{11})/,
+    /youtube\.com\/shorts\/([\w-]{11})/,
+    /youtube\.com\/live\/([\w-]{11})/,
   ];
   for (const p of patterns) {
     const m = url.match(p);
@@ -181,13 +184,17 @@ export default function UploadPage() {
     setPhase("uploading");
 
     try {
-      const created: { id: string; slug: string }[] = [];
+      const created: {
+        id: string;
+        slug: string;
+        status?: "processing" | "ready" | "error";
+      }[] = [];
 
       if (tab === "document") {
         for (const file of files) {
           const ext = file.name.split(".").pop()?.toLowerCase();
 
-          if (ext === "txt") {
+          if (ext === "txt" || ext === "md") {
             const res = await postDocument({
               source_type: "txt",
               raw_text: await file.text(),
@@ -230,7 +237,23 @@ export default function UploadPage() {
         created.push(await res.json());
       }
 
-      pendingRef.current = created.map((c) => ({ ...c, status: "processing" }));
+      // Plain text is processed inline and returns status: "ready" immediately —
+      // no OCR and no processor round-trip.
+      const allReady = created.every((c) => c.status === "ready");
+      if (allReady) {
+        toast.success(
+          created.length > 1
+            ? `Added ${created.length} documents`
+            : "Ready to read",
+        );
+        router.push(`/c/${created[created.length - 1].slug}`);
+        return;
+      }
+
+      pendingRef.current = created.map((c) => ({
+        ...c,
+        status: (c.status as PendingDoc["status"]) || "processing",
+      }));
       setPendingDocs(pendingRef.current);
       setPhase("processing");
       toast.success(

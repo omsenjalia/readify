@@ -25,6 +25,10 @@ readify/
 └── .github/         CI workflows
 ```
 
+> **Naming:** the service lives in the `backend/` folder. Env vars still say
+> `PROCESSOR_URL` / `PROCESSOR_SECRET` because that is its role (extract text
+> from PDFs, DOCX, YouTube). Railway root directory = `backend`.
+
 ## Quick start
 
 ```bash
@@ -71,9 +75,8 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 | ------------------------------- | -------- | ----------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Yes      | Supabase project URL                            |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes      | Supabase anon/public key                        |
-| `SUPABASE_SERVICE_ROLE_KEY`     | Yes      | Supabase service-role key (server-side only)    |
-| `PROCESSOR_URL`                 | Yes      | Backend URL, e.g. `http://localhost:8001`       |
-| `PROCESSOR_SECRET`              | Yes      | Shared secret to authenticate with the backend  |
+| `PROCESSOR_URL`                 | Yes*     | Backend base URL, e.g. `http://localhost:8001` (*required for PDF/DOCX/YouTube; plain text works without it) |
+| `PROCESSOR_SECRET`              | Yes*     | Shared secret with `backend/.env` (same value)  |
 
 ### `backend/.env`
 
@@ -89,10 +92,17 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. Go to **Settings -> API** and copy the **Project URL**, **anon key**, and **service_role key**.
-3. Apply the schema:
-   - **SQL Editor:** paste `supabase/migrations/20260113120000_database_schema_and_rls.sql` and run it (creates tables, RLS policies, and the public `document-images` storage bucket).
-   - **CLI:** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
-   - **Direct:** `psql "$DATABASE_URL" -f supabase/migrations/20260113120000_database_schema_and_rls.sql`
+3. Apply **all** migrations under `supabase/migrations/` (not just the first file):
+   - `20260113120000_database_schema_and_rls.sql` — tables, RLS, public `document-images` bucket
+   - `20260913191431_add_progress_msg.sql` — `documents.progress_msg`
+   - `20260913191800_documents_storage_bucket.sql` — private `documents` upload bucket
+   - `20260913220000_add_needs_ocr.sql` — `content_blocks.needs_ocr` (scanned PDFs only; plain text never needs OCR)
+   - `20260913220010_add_document_images_storage_policies.sql` — owner read/delete on extracted images
+   - `20260914090000_content_blocks_owner_write_and_storage_cleanup.sql` — owner insert/update/delete on content_blocks (required for inline text uploads) + delete policy on private documents bucket
+   - `20260914100000_storage_path_and_private_images.sql` — `storage_path` / `source_url` columns; private `document-images` + select for document readers (signed URLs)
+   - **CLI (preferred):** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
+   - **SQL Editor:** run each file in timestamp order
+   - Skipping later migrations is the most common cause of uploads ending in **Error**
 4. Regenerate TypeScript types after any schema change:
    ```bash
    cd web && npm run db:types
@@ -101,7 +111,7 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
 ## Architecture
 
 ```
-Browser  --->  web (Next.js :3000)  -- POST /api/process -->  backend (:8001)
+Browser  --->  web (Next.js :3000)  -- POST /api/documents -->  backend (:8001) /api/process
    |                     |                                          |
    |               Supabase Auth                           Supabase Postgres
    |              + Postgres                                       |

@@ -55,6 +55,8 @@ export type Database = {
           last_read_at: string | null;
           error_msg: string | null;
           progress_msg: string | null;
+          storage_path: string | null;
+          source_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -71,6 +73,8 @@ export type Database = {
           last_read_at?: string | null;
           error_msg?: string | null;
           progress_msg?: string | null;
+          storage_path?: string | null;
+          source_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -87,6 +91,8 @@ export type Database = {
           last_read_at?: string | null;
           error_msg?: string | null;
           progress_msg?: string | null;
+          storage_path?: string | null;
+          source_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -108,6 +114,7 @@ export type Database = {
           type: string;
           words: string[] | null;
           image_url: string | null;
+          needs_ocr: boolean | null;
           created_at: string;
         };
         Insert: {
@@ -117,6 +124,7 @@ export type Database = {
           type: string;
           words?: string[] | null;
           image_url?: string | null;
+          needs_ocr?: boolean | null;
           created_at?: string;
         };
         Update: {
@@ -126,6 +134,7 @@ export type Database = {
           type?: string;
           words?: string[] | null;
           image_url?: string | null;
+          needs_ocr?: boolean | null;
           created_at?: string;
         };
         Relationships: [

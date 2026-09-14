@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const IMAGE_BUCKET = "document-images";
+const SOURCE_BUCKET = "documents";
 
 export async function PATCH(
   request: NextRequest,
@@ -85,7 +86,7 @@ export async function DELETE(
 
   const { data: owned } = await supabase
     .from("documents")
-    .select("id")
+    .select("id, storage_path")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -93,26 +94,25 @@ export async function DELETE(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  const { data: objects, error: listError } = await supabase.storage
-    .from(IMAGE_BUCKET)
-    .list(id, { limit: 1000, offset: 0 });
-  if (listError) {
-    return NextResponse.json(
-      { error: listError.message },
-      { status: 500 },
-    );
+  // Best-effort cleanup of extracted images + original upload.
+  // Never fail the whole delete on storage blips — DB row is source of truth.
+  try {
+    const { data: objects } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .list(id, { limit: 1000, offset: 0 });
+    if (objects && objects.length > 0) {
+      const paths = objects.map((o) => `${id}/${o.name}`);
+      await supabase.storage.from(IMAGE_BUCKET).remove(paths);
+    }
+  } catch {
+    // ignore
   }
 
-  if (objects && objects.length > 0) {
-    const paths = objects.map((o) => `${id}/${o.name}`);
-    const { error: rmError } = await supabase.storage
-      .from(IMAGE_BUCKET)
-      .remove(paths);
-    if (rmError) {
-      return NextResponse.json(
-        { error: rmError.message },
-        { status: 500 },
-      );
+  if (owned.storage_path) {
+    try {
+      await supabase.storage.from(SOURCE_BUCKET).remove([owned.storage_path]);
+    } catch {
+      // ignore
     }
   }
 

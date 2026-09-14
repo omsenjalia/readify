@@ -1,31 +1,38 @@
 @import "tailwindcss";
 
-/* Light theme is the default — no extra class needed on <html>. */
+/* Cream editorial light theme is the product default.
+   Dark / sepia only apply when the user explicitly sets the class on <html>.
+   Do NOT follow prefers-color-scheme — that was forcing a dark chrome that
+   fought the mockups and left hardcoded gray-900 text unreadable. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted-foreground: #6b7280;
+  --background: #f6f1e8;
+  --foreground: #1a1814;
+  --muted-foreground: #7a7368;
+  --surface: #ffffff;
+  --line: #e8e0d4;
 }
 
-/* Tailwind dark mode via the "dark" class on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 .dark {
-  --background: #0b0b0f;
-  --foreground: #ededed;
-  --muted-foreground: #9ca3af;
+  --background: #12110f;
+  --foreground: #f4f0e8;
+  --muted-foreground: #b4ada2;
+  --surface: #1c1b18;
+  --line: #2c2a26;
 }
 
-/* Sepia theme via the "sepia" class on <html>. */
 .sepia {
-  --background: #f5f0e8;
-  --foreground: #3d3d3d;
+  --background: #f3e6c9;
+  --foreground: #3d2f1c;
   --muted-foreground: #8a7a5c;
+  --surface: #faf0d4;
+  --line: #e4d3aa;
 }
 
 .sepia body {
-  background-color: #f5f0e8;
-  color: #3d3d3d;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @theme inline {
@@ -35,15 +42,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.dark):not(.sepia) {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

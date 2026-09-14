@@ -36,10 +36,17 @@ def _secret_dep(
 
     Accepted as ``Authorization: Bearer <secret>``, with the legacy
     ``X-Processor-Secret`` header still honoured during the web-app rollout.
+
+    Refuses to start accepting traffic if PROCESSOR_SECRET is missing or still
+    set to the example placeholder — that used to fail-open and left the
+    processor world-writable whenever env was misconfigured.
     """
     expected = os.environ.get("PROCESSOR_SECRET")
     if not expected or expected == "change-me-in-production":
-        return
+        raise HTTPException(
+            status_code=503,
+            detail="PROCESSOR_SECRET is not configured",
+        )
     token = None
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
@@ -134,63 +141,87 @@ def _persist_document(
     source_type: str,
     blocks: list[dict],
 ) -> int:
-    """Write a processed document + its content blocks to Supabase.
+    """Write content blocks first, then mark the document ready.
 
-    Documents land in ``public.documents``; each block becomes a row in
-    ``public.content_blocks`` (type 'text' stores tokenized words, type
-    'image' stores a public image_url). Reprocessing a document replaces
-    its existing blocks so re-runs stay idempotent. The web app already
-    created the row (and its slug), so the slug is preserved on update.
+    Order matters: older builds marked status=ready *before* inserting
+    content_blocks. If the insert failed (e.g. missing needs_ocr column),
+    the row ended up with word_count set and status=error — matching the
+    broken library screenshot. Blocks go in first; only then is status
+    flipped to ready. User fields (visibility, is_favorite) are preserved.
     """
     supabase = get_supabase()
     word_count = sum(len(_block_words(b)) for b in blocks)
     now = datetime.now(UTC).isoformat()
 
+    # Prefer including needs_ocr when the column exists; fall back without it
+    # so partial migrations still succeed for plain text/paragraph blocks.
+    def _rows(include_needs_ocr: bool) -> list[dict]:
+        out: list[dict] = []
+        for position, block in enumerate(blocks):
+            if block.get("type") == "image":
+                row = {
+                    "document_id": document_id,
+                    "position": position,
+                    "type": "image",
+                    "image_url": block.get("image_url") or block.get("url"),
+                }
+                if include_needs_ocr:
+                    row["needs_ocr"] = bool(block.get("needs_ocr"))
+                out.append(row)
+            else:
+                row = {
+                    "document_id": document_id,
+                    "position": position,
+                    "type": "text",
+                    "words": _block_words(block),
+                }
+                if include_needs_ocr:
+                    row["needs_ocr"] = False
+                out.append(row)
+        return out
+
+    supabase.table("content_blocks").delete().eq(
+        "document_id", document_id
+    ).execute()
+
+    rows = _rows(True)
+    if rows:
+        try:
+            supabase.table("content_blocks").insert(rows).execute()
+        except Exception as exc:
+            logger.warning(
+                "content_blocks insert with needs_ocr failed (%s); retrying without",
+                exc,
+            )
+            rows = _rows(False)
+            if rows:
+                supabase.table("content_blocks").insert(rows).execute()
+
+    # Only mark ready AFTER blocks landed. Do not reset visibility / favorite.
     fields = {
         "title": title or "Untitled document",
         "source_type": source_type,
         "status": "ready",
-        "visibility": "private",
         "word_count": word_count,
-        "is_favorite": False,
         "error_msg": None,
+        "progress_msg": None,
         "updated_at": now,
     }
     existing = (
         supabase.table("documents").select("id").eq("id", document_id).execute()
     )
     if existing.data:
-        fields.pop("slug", None)
         supabase.table("documents").update(fields).eq("id", document_id).execute()
     else:
         supabase.table("documents").insert(
-            {"id": document_id, "slug": slug, **fields}
+            {
+                "id": document_id,
+                "slug": slug,
+                "visibility": "private",
+                "is_favorite": False,
+                **fields,
+            }
         ).execute()
-
-    rows = [
-        {
-            "document_id": document_id,
-            "position": position,
-            "type": "image",
-            "image_url": block.get("image_url") or block.get("url"),
-            "needs_ocr": bool(block.get("needs_ocr")),
-        }
-        if block.get("type") == "image"
-        else {
-            "document_id": document_id,
-            "position": position,
-            "type": "text",
-            "words": _block_words(block),
-            "needs_ocr": False,
-        }
-        for position, block in enumerate(blocks)
-    ]
-
-    supabase.table("content_blocks").delete().eq(
-        "document_id", document_id
-    ).execute()
-    if rows:
-        supabase.table("content_blocks").insert(rows).execute()
 
     return word_count
 
@@ -285,7 +316,11 @@ async def process(
     )
 
 
-@router.get("/status/{job_id}", response_model=ProcessingStatus)
+@router.get(
+    "/status/{job_id}",
+    response_model=ProcessingStatus,
+    dependencies=[Depends(_secret_dep)],
+)
 async def status(job_id: str) -> ProcessingStatus:
     job = _get_status(job_id)
     if job is None:
