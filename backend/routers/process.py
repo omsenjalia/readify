@@ -36,10 +36,17 @@ def _secret_dep(
 
     Accepted as ``Authorization: Bearer <secret>``, with the legacy
     ``X-Processor-Secret`` header still honoured during the web-app rollout.
+
+    Refuses to start accepting traffic if PROCESSOR_SECRET is missing or still
+    set to the example placeholder — that used to fail-open and left the
+    processor world-writable whenever env was misconfigured.
     """
     expected = os.environ.get("PROCESSOR_SECRET")
     if not expected or expected == "change-me-in-production":
-        return
+        raise HTTPException(
+            status_code=503,
+            detail="PROCESSOR_SECRET is not configured",
+        )
     token = None
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()

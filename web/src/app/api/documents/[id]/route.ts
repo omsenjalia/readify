@@ -93,27 +93,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  const { data: objects, error: listError } = await supabase.storage
-    .from(IMAGE_BUCKET)
-    .list(id, { limit: 1000, offset: 0 });
-  if (listError) {
-    return NextResponse.json(
-      { error: listError.message },
-      { status: 500 },
-    );
-  }
-
-  if (objects && objects.length > 0) {
-    const paths = objects.map((o) => `${id}/${o.name}`);
-    const { error: rmError } = await supabase.storage
+  // Best-effort cleanup of extracted images. Do not fail the whole delete
+  // if storage is momentarily unavailable — the DB row is the source of truth.
+  try {
+    const { data: objects } = await supabase.storage
       .from(IMAGE_BUCKET)
-      .remove(paths);
-    if (rmError) {
-      return NextResponse.json(
-        { error: rmError.message },
-        { status: 500 },
-      );
+      .list(id, { limit: 1000, offset: 0 });
+    if (objects && objects.length > 0) {
+      const paths = objects.map((o) => `${id}/${o.name}`);
+      await supabase.storage.from(IMAGE_BUCKET).remove(paths);
     }
+  } catch {
+    // ignore storage cleanup errors
   }
 
   const { error } = await supabase

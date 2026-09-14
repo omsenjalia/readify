@@ -15,12 +15,27 @@ export default async function AppLayout(props: LayoutProps<"/">) {
 
   const email = user.email ?? "user@example.com";
 
+  // Apply saved theme on every authenticated page so library/dashboard/settings
+  // match the reader's preference (previously only Reader/Settings touched <html>).
+  const { data: prefs } = await supabase
+    .from("reading_preferences")
+    .select("theme")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const theme =
+    prefs?.theme === "dark" || prefs?.theme === "sepia" ? prefs.theme : null;
+
   return (
     <div className="flex min-h-screen flex-col">
+      {theme ? (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.classList.add(${JSON.stringify(theme)});`,
+          }}
+        />
+      ) : null}
       <TopNav email={email} />
-      <main className="flex-1 pb-20 md:pb-0">
-        {props.children}
-      </main>
+      <main className="flex-1 pb-20 md:pb-0">{props.children}</main>
       <BottomNav />
     </div>
   );
