@@ -36,27 +36,26 @@ async def extract_pdf_blocks(
 ) -> list[dict]:
     """Extract text and image blocks from a PDF byte stream.
 
-    Blocks come back in page order:
+    OCR policy (DocStrange is *not* used on normal digital PDFs):
 
-    - A page with substantial text emits
-      ``{"type": "text", "words": [...]}`` where ``words`` preserves the
-      tokenization the RSVP engine consumes.
-    - Embedded images on that page are extracted via PyMuPDF, converted to
-      PNG, uploaded to the ``document-images`` storage bucket and emitted as
-      ``{"type": "image", "image_url": ...}``.
-    - An image-only (scanned) page has its full page rendered at 2x scale,
-      uploaded the same way, and emitted as an image block flagged
-      ``needs_ocr=True``. OCR is performed by the Nanonets DocStrange API
-      (``DOCSTRANGE_API_KEY``). Multi-page scans are sent as a single PDF
-      when possible; otherwise each page image is OCRed. Failures fall back
-      to ``[Page could not be read]`` rather than failing the whole document.
+    - **Text page** (``page.get_text`` yields >20 chars): use the native
+      text layer only. Embedded figures are uploaded as image blocks for
+      the reader — they are never OCRed.
+    - **Image-only / scanned / handwritten page** (little or no text layer):
+      render the page and OCR via DocStrange. Fully scanned PDFs may use
+      one full-file DocStrange call; mixed PDFs OCR only the scanned pages.
+
+    Failures fall back to ``[Page could not be read]`` without failing the
+    whole document.
     """
     blocks: list[dict] = []
     supabase = get_supabase()
     ocr_tasks: list[tuple[int, int, bytes]] = []
     doc = pymupdf.open(stream=file_bytes, filetype="pdf")
     try:
+        total_pages = doc.page_count
         for page_num, page in enumerate(doc, start=1):
+            # Native text layer — never OCR these pages (even if they embed images).
             text = page.get_text("text").strip()
             has_text = len(text) > 20
 
@@ -66,6 +65,8 @@ async def extract_pdf_blocks(
                 )
 
             if has_text:
+                # Figures on a text page: store as images for the reader.
+                # Do NOT OCR them — the page text already covers the content.
                 img_objects = page.get_images(full=True)
                 for img_idx, img in enumerate(img_objects, start=1):
                     pix = pymupdf.Pixmap(doc, img[0])
@@ -103,8 +104,10 @@ async def extract_pdf_blocks(
             )
         logger.info("DocStrange OCR for %d scanned pages", len(ocr_tasks))
 
-        # Prefer one full-PDF call when multiple pages need OCR (better layout).
-        if len(ocr_tasks) >= 2:
+        # Prefer one full-PDF call only when *every* page is scanned.
+        # Mixed docs (text pages + a few scans) stay per-page so we never
+        # re-OCR pages that already have a text layer.
+        if len(ocr_tasks) >= 2 and len(ocr_tasks) == total_pages:
             try:
                 from services.ocr import ocr_pdf_bytes
 
