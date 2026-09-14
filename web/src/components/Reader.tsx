@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitAtORP } from "@/lib/orp";
-import { isMathToken } from "@/lib/math";
+import { isMathToken, formatMathDisplay } from "@/lib/math";
 
 /** How long graphical figures pause the RSVP stream (not OCR). */
 const IMAGE_DWELL_MS = 3000;
@@ -841,12 +841,12 @@ export default function ReaderClient({
                 <div
                   className="max-w-full px-4 text-center font-semibold tracking-tight"
                   style={{
-                    fontSize: Math.min(fontSize, 42),
-                    lineHeight: 1.25,
+                    fontSize: Math.min(fontSize, Math.max(22, 48 - currentItem.text.length / 3)),
+                    lineHeight: 1.3,
                     color: "var(--color-orp, #4f46e5)",
                   }}
                 >
-                  {currentItem.text}
+                  {formatMathDisplay(currentItem.text)}
                 </div>
               ) : (
                 <>
