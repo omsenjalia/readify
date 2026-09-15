@@ -2,6 +2,9 @@
  * Math-aware RSVP helpers for textbook equations, comparisons, definitions.
  */
 
+/** Shared dwell for images and equations (user can Space to skip). */
+export const SPECIAL_DWELL_MS = 15_000;
+
 const MATH_OPS = /[=∝⟹⇒→⇔]/;
 const MATH_HINT =
   /[μΦφ∅Ωαβγδθλρσω∫∑√≤≥≠±·×÷∂∇₀-₉⁰-⁹ηρ]/;
@@ -39,7 +42,9 @@ export function isComparisonToken(token: string): boolean {
 }
 
 /** Split comparison into left / right sides for stacked display. */
-export function splitComparison(token: string): { left: string; right: string } | null {
+export function splitComparison(
+  token: string,
+): { left: string; right: string } | null {
   const parts = token.split(/\s*⇔\s*/);
   if (parts.length !== 2) return null;
   return { left: parts[0].trim(), right: parts[1].trim() };
@@ -54,13 +59,9 @@ export function formatMathDisplay(expr: string): string {
     .trim();
 }
 
-/** Dwell multiplier vs normal word interval (formulas need more time). */
-export function mathDwellMs(token: string, wpm: number): number {
-  const base = 60000 / Math.max(wpm, 1);
-  const len = token.length;
-  // ~1.8s minimum, scales up for long formulas, caps at 4s
-  const target = Math.max(1800, base * (2 + len / 40));
-  return Math.min(4000, Math.round(target));
+/** Fixed 15s dwell for formulas (Space skips). */
+export function mathDwellMs(_token?: string, _wpm?: number): number {
+  return SPECIAL_DWELL_MS;
 }
 
 export function isUnitToken(token: string): boolean {
@@ -69,7 +70,10 @@ export function isUnitToken(token: string): boolean {
 
 export function toLatex(expr: string): string {
   let s = formatMathDisplay(expr);
-  s = s.replace(/μ/g, "\\mu ").replace(/Φ|φ|∅/g, "\\phi ").replace(/Ω/g, "\\Omega ");
+  s = s
+    .replace(/μ/g, "\\mu ")
+    .replace(/Φ|φ|∅/g, "\\phi ")
+    .replace(/Ω/g, "\\Omega ");
   s = s.replace(/·/g, "\\cdot ").replace(/×/g, "\\times ");
   s = s.replace(/∝/g, "\\propto ").replace(/⇔/g, "\\Leftrightarrow ");
   return s;
