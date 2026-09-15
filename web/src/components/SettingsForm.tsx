@@ -263,7 +263,7 @@ export default function SettingsForm({
               }}
             />
             <SettingToggle
-              label="Auto-pause on images"
+              label="Auto-pause images (15s)"
               checked={autoPauseImages}
               onChange={(next) => {
                 setAutoPauseImages(next);

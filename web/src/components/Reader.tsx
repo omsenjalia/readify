@@ -39,11 +39,12 @@ import {
   isDefinitionToken,
   isMathToken,
   mathDwellMs,
+  SPECIAL_DWELL_MS,
   splitComparison,
 } from "@/lib/math";
 
 /** How long graphical figures pause the RSVP stream (not OCR). */
-const IMAGE_DWELL_MS = 3000;
+const IMAGE_DWELL_MS = SPECIAL_DWELL_MS; // 15s — Space to skip
 import {
   getLocalProgress,
   getRemoteProgress,
@@ -128,7 +129,7 @@ export default function ReaderClient({
   const [imageRemaining, setImageRemaining] = useState(0);
   const [mathPaused, setMathPaused] = useState(false);
   const [mathRemaining, setMathRemaining] = useState(0);
-  const [mathDwell, setMathDwell] = useState(1800);
+  const [mathDwell, setMathDwell] = useState(SPECIAL_DWELL_MS);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [wpmOpen, setWpmOpen] = useState(false);
@@ -821,7 +822,7 @@ export default function ReaderClient({
           }}
         />
         <SettingRow
-          label="Auto-pause images"
+          label="Auto-pause images (15s)"
           checked={autoPauseImages}
           onChange={(v) => {
             setAutoPauseImages(v);
@@ -882,27 +883,36 @@ export default function ReaderClient({
 
       <main className="flex flex-1 flex-col items-center justify-center px-4">
         {currentItem?.kind === "image" ? (
-          <div className="flex flex-col items-center">
+          <div className="flex w-full max-w-3xl flex-col items-center">
+            <div className="card w-full overflow-hidden p-3 sm:p-4">
             <img
               src={currentItem.url}
               alt="Document figure"
-              className="max-h-64 rounded-xl object-contain shadow-lg"
+              className="max-h-[min(70vh,28rem)] w-full rounded-xl object-contain"
             />
+            </div>
             {imagePaused && autoPauseImages && (
-              <div className="mt-4 text-center">
-                <p className="text-sm font-medium text-[#4F6EF6]">
-                  Resuming in {Math.max(1, Math.round(imageRemaining / 1000))}s…
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Press Space to continue
-                </p>
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2 rounded-full border border-line bg-bg-elevated px-4 py-2 text-sm text-ink shadow-sm">
+                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[#4F6EF6]/15 text-xs font-bold text-[#4F6EF6]">
+                    {Math.max(1, Math.round(imageRemaining / 1000))}
+                  </span>
+                  <span className="text-muted">Figure pause</span>
+                  <button
+                    type="button"
+                    onClick={resume}
+                    className="rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink-inv transition hover:opacity-90"
+                  >
+                    Continue
+                  </button>
+                </div>
               </div>
             )}
           </div>
         ) : (
           <div
             className="flex w-full max-w-3xl flex-col items-center justify-center"
-            style={{ height: 200 }}
+            style={{ height: 240 }}
           >
             <div
               className="flex h-[40%] w-full items-center justify-center overflow-hidden"
@@ -989,11 +999,19 @@ export default function ReaderClient({
                     </div>
                   )}
                   {mathPaused && (
-                    <p className="text-xs text-muted">
-                      Formula · resume in{" "}
-                      {Math.max(1, Math.round(mathRemaining / 1000))}s · Space
-                      to continue
-                    </p>
+                    <div className="mt-2 flex items-center gap-2 rounded-full border border-line bg-bg-elevated px-4 py-2 text-sm shadow-sm">
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-orp/15 text-xs font-bold text-orp">
+                        {Math.max(1, Math.round(mathRemaining / 1000))}
+                      </span>
+                      <span className="text-muted">Formula pause</span>
+                      <button
+                        type="button"
+                        onClick={resume}
+                        className="rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink-inv transition hover:opacity-90"
+                      >
+                        Continue
+                      </button>
+                    </div>
                   )}
                 </div>
               ) : (
