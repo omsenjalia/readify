@@ -9,9 +9,6 @@ const MATH_OPS = /[=∝⟹⇒→⇔]/;
 const MATH_HINT =
   /[μΦφ∅Ωαβγδθλρσω∫∑√≤≥≠±·×÷∂∇₀-₉⁰-⁹ηρ]/;
 
-const UNIT_RE =
-  /^(?:Wb(?:\/m²|\/m2)?|AT(?:\/m)?|Watts?|V|A|Hz|H|T|N|m|mm|cm|kg|Wb\/m\^?2|A\/m²|A\/m2)$/i;
-
 export function isMathToken(token: string): boolean {
   const t = token.trim();
   if (t.length < 3 || t.length > 140) return false;
@@ -59,22 +56,12 @@ export function formatMathDisplay(expr: string): string {
     .trim();
 }
 
-/** Fixed 15s dwell for formulas (Space skips). */
-export function mathDwellMs(_token?: string, _wpm?: number): number {
+/**
+ * Dwell for formulas: a fixed 15s, shared with figures (Space skips).
+ *
+ * Deliberately not speed-dependent — a formula needs the same reading time
+ * whether the surrounding prose is at 200 or 800 WPM.
+ */
+export function mathDwellMs(): number {
   return SPECIAL_DWELL_MS;
-}
-
-export function isUnitToken(token: string): boolean {
-  return UNIT_RE.test(token.trim());
-}
-
-export function toLatex(expr: string): string {
-  let s = formatMathDisplay(expr);
-  s = s
-    .replace(/μ/g, "\\mu ")
-    .replace(/Φ|φ|∅/g, "\\phi ")
-    .replace(/Ω/g, "\\Omega ");
-  s = s.replace(/·/g, "\\cdot ").replace(/×/g, "\\times ");
-  s = s.replace(/∝/g, "\\propto ").replace(/⇔/g, "\\Leftrightarrow ");
-  return s;
 }

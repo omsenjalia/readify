@@ -52,7 +52,14 @@ export function markdownToPlainText(md: string): string {
   text = text.replace(/(?<!_)_([^_\n]+)_(?!_)/g, "$1");
   text = text.replace(/~~([^~]+)~~/g, "$1");
   text = text.replace(/`([^`]+)`/g, "$1");
-  text = text.replace(/^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-+:?\s*$/gm, "");
+  // Markdown table separator rows: `|---|---|`, `--- | ---`, `:--|--:`.
+  // The previous pattern required a trailing `|` segment after the last
+  // dash group, so a normal `|---|---|` separator never matched and leaked
+  // into the reading stream as a literal "---, ---" line.
+  text = text.replace(
+    /^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$/gm,
+    "",
+  );
   text = text.replace(/^\s*\|(.+)\|\s*$/gm, (_, cells: string) =>
     cells
       .split("|")

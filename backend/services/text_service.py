@@ -4,7 +4,6 @@ import unicodedata
 from services.math_text import (
     extract_math_segments,
     glue_units,
-    is_math_token,
     normalize_math_token,
 )
 
@@ -46,10 +45,6 @@ def tokenize_words(text: str) -> list[str]:
             if piece:
                 out.append(piece)
     return glue_units(out)
-
-
-def token_is_math(token: str) -> bool:
-    return is_math_token(token)
 
 
 def _looks_like_markdown(text: str) -> bool:
@@ -99,7 +94,3 @@ def extract_text(text: str) -> list[dict]:
     if not paragraphs and text.strip():
         paragraphs = [text.strip()]
     return [{"type": "paragraph", "text": p.replace("\n", " ")} for p in paragraphs]
-
-
-def paragraph_to_words(text: str) -> list[str]:
-    return tokenize_words(text)

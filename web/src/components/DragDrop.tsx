@@ -3,8 +3,13 @@
 import { useCallback, useRef, useState, type DragEvent } from "react";
 import { Upload, X } from "lucide-react";
 import clsx from "clsx";
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+import {
+  ACCEPT_ATTRIBUTE,
+  MAX_FILES_PER_UPLOAD,
+  MAX_FILE_SIZE,
+  SUPPORTED_EXTENSIONS,
+} from "@/lib/constants";
+import { formatBytes } from "@/lib/format";
 
 const ACCEPT_MAP: Record<string, string[]> = {
   ".pdf": ["application/pdf"],
@@ -30,8 +35,8 @@ function extAccepted(file: File, accept: string): boolean {
 
 export default function DragDrop({
   onFiles,
-  accept = ".pdf,.docx,.txt,.md,.epub",
-  maxFiles = 5,
+  accept = ACCEPT_ATTRIBUTE,
+  maxFiles = MAX_FILES_PER_UPLOAD,
 }: {
   onFiles: (files: File[]) => void;
   accept?: string;
@@ -53,7 +58,7 @@ export default function DragDrop({
         const tooBig = rejected.some((f) => f.size > MAX_FILE_SIZE);
         setValidateError(
           tooBig
-            ? "One or more files exceed the 50MB limit."
+            ? `One or more files exceed the ${formatBytes(MAX_FILE_SIZE)} limit.`
             : `Only ${accept.replaceAll(",", ", ")} files are supported.`,
         );
       } else {
@@ -103,12 +108,6 @@ export default function DragDrop({
     if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
   };
 
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   return (
     <div className="w-full">
       <div
@@ -135,8 +134,8 @@ export default function DragDrop({
           Drop your files here or click to browse
         </p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Supported: PDF, DOCX, TXT, EPUB — Max 50MB each — Up to{" "}
-          {maxFiles} files
+          Supported: {SUPPORTED_EXTENSIONS.join(", ")} — Max{" "}
+          {formatBytes(MAX_FILE_SIZE)} each — Up to {maxFiles} files
         </p>
       </div>
 
@@ -169,7 +168,7 @@ export default function DragDrop({
                 <p className="truncate text-sm font-medium text-[var(--foreground)]">
                   {file.name}
                 </p>
-                <p className="text-xs text-[var(--muted)]">{formatSize(file.size)}</p>
+                <p className="text-xs text-[var(--muted)]">{formatBytes(file.size)}</p>
               </div>
               <button
                 type="button"

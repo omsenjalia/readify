@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const PROCESSOR_URL = process.env.PROCESSOR_URL;
-const PROCESSOR_SECRET = process.env.PROCESSOR_SECRET;
+import {
+  markDocumentError,
+  markDocumentProcessing,
+  notifyProcessor,
+} from "@/lib/processor";
 
 /**
  * Re-queue a failed (or any non-ready) document for processing.
- * Uses stored storage_path / source_url so the user does not re-upload.
+ * Uses the stored storage_path / source_url so the user does not re-upload.
  */
 export async function POST(
   _request: NextRequest,
@@ -24,9 +26,7 @@ export async function POST(
 
   const { data: doc, error } = await supabase
     .from("documents")
-    .select(
-      "id, slug, title, source_type, status, storage_path, source_url",
-    )
+    .select("id, slug, title, source_type, status, storage_path, source_url")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -35,6 +35,7 @@ export async function POST(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
+  // --- guard rails: what can actually be reprocessed? -------------
   if (doc.source_type === "text") {
     return NextResponse.json(
       {
@@ -44,14 +45,12 @@ export async function POST(
       { status: 400 },
     );
   }
-
   if (doc.source_type === "youtube" && !doc.source_url) {
     return NextResponse.json(
       { error: "No YouTube URL stored on this document" },
       { status: 400 },
     );
   }
-
   if (
     (doc.source_type === "pdf" || doc.source_type === "docx") &&
     !doc.storage_path
@@ -65,75 +64,21 @@ export async function POST(
     );
   }
 
-  const { error: resetError } = await supabase
-    .from("documents")
-    .update({
-      status: "processing",
-      error_msg: null,
-      progress_msg: "Reprocessing…",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("user_id", user.id);
-
+  const resetError = await markDocumentProcessing(supabase, id, "Reprocessing…");
   if (resetError) {
-    return NextResponse.json(
-      { error: resetError.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: resetError }, { status: 500 });
   }
 
   after(async () => {
-    if (!PROCESSOR_URL || !PROCESSOR_SECRET) {
-      await supabase
-        .from("documents")
-        .update({
-          status: "error",
-          error_msg:
-            "Document processor is not configured. Set PROCESSOR_URL and PROCESSOR_SECRET.",
-          progress_msg: null,
-        })
-        .eq("id", id);
-      return;
-    }
-    try {
-      const res = await fetch(`${PROCESSOR_URL}/api/process`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${PROCESSOR_SECRET}`,
-        },
-        body: JSON.stringify({
-          document_id: doc.id,
-          source_type: doc.source_type,
-          title: doc.title,
-          storage_path: doc.storage_path,
-          youtube_url: doc.source_url,
-        }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        await supabase
-          .from("documents")
-          .update({
-            status: "error",
-            error_msg: `Processor failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-            progress_msg: null,
-          })
-          .eq("id", id);
-      }
-    } catch (err) {
-      await supabase
-        .from("documents")
-        .update({
-          status: "error",
-          error_msg:
-            err instanceof Error
-              ? `Could not reach processor: ${err.message}`
-              : "Could not reach processor",
-          progress_msg: null,
-        })
-        .eq("id", id);
+    const result = await notifyProcessor({
+      document_id: doc.id,
+      source_type: doc.source_type,
+      title: doc.title,
+      storage_path: doc.storage_path,
+      youtube_url: doc.source_url,
+    });
+    if (!result.ok) {
+      await markDocumentError(supabase, doc.id, result.message);
     }
   });
 

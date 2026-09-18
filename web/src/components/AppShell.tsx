@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -11,7 +11,6 @@ import {
   Library,
   LogOut,
   Settings,
-  Share2,
   Upload,
 } from "lucide-react";
 
@@ -23,6 +22,45 @@ const NAV = [
 ];
 
 const STORAGE_KEY = "readify.sidebar.collapsed";
+/** Notifies same-tab listeners, since `storage` only fires in other tabs. */
+const TOGGLE_EVENT = "readify:sidebar-toggle";
+
+/**
+ * Sidebar collapse state lives in localStorage (an external system), so it is
+ * read with `useSyncExternalStore` rather than copied into state inside an
+ * effect. That avoids a cascading render on mount and the hydration flash the
+ * old `ready`/`opacity-0` dance was working around.
+ */
+function subscribeToSidebar(onChange: () => void): () => void {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(TOGGLE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(TOGGLE_EVENT, onChange);
+  };
+}
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Server/initial render always shows the expanded sidebar. */
+function serverCollapsed(): boolean {
+  return false;
+}
+
+function writeCollapsed(next: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+  } catch {
+    // Private mode / storage disabled: fall back to in-memory only.
+  }
+  window.dispatchEvent(new Event(TOGGLE_EVENT));
+}
 
 /**
  * Collapsible left rail — full labels or icons-only.
@@ -38,30 +76,15 @@ export default function AppShell({
   const pathname = usePathname();
   const initial = email.charAt(0).toUpperCase() || "R";
   const name = email.split("@")[0] || "You";
-  const [collapsed, setCollapsed] = useState(false);
-  const [ready, setReady] = useState(false);
+  const collapsed = useSyncExternalStore(
+    subscribeToSidebar,
+    readCollapsed,
+    serverCollapsed,
+  );
 
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem(STORAGE_KEY);
-      if (v === "1") setCollapsed(true);
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
+  const toggle = useCallback(() => {
+    writeCollapsed(!readCollapsed());
   }, []);
-
-  function toggle() {
-    setCollapsed((c) => {
-      const next = !c;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }
 
   return (
     <div className="flex min-h-dvh bg-bg text-ink">
@@ -70,7 +93,6 @@ export default function AppShell({
         className={clsx(
           "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-bg-elevated transition-[width] duration-200 ease-out md:flex",
           collapsed ? "w-[72px] px-2 py-4" : "w-[232px] px-3 py-5",
-          !ready && "opacity-0",
         )}
       >
         {/* Brand + collapse */}

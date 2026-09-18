@@ -120,19 +120,6 @@ def is_math_token(token: str) -> bool:
     return False
 
 
-def is_definition_token(token: str) -> bool:
-    """Term = long English gloss (textbook definition lists)."""
-    t = token.strip()
-    if t.count("=") != 1:
-        return False
-    left, right = t.split("=", 1)
-    left, right = left.strip(), right.strip()
-    if len(left) > 24 or len(right) < 10:
-        return False
-    alpha = re.findall(r"\b[A-Za-z]{3,}\b", right)
-    return len(alpha) >= 2 and not any(c in right for c in "μΦ∅∫∑")
-
-
 def extract_math_segments(text: str) -> list[tuple[str, bool]]:
     if not text or not text.strip():
         return []

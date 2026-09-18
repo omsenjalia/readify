@@ -1,40 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  Check,
-  FileText,
-  MonitorPlay,
-  Type,
-  Upload,
-} from "lucide-react";
+import { Check, FileText, MonitorPlay, Type, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-
-function typeBadge(source: string) {
-  const s = (source || "").toLowerCase();
-  if (s === "pdf")
-    return (
-      <span className="rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-        PDF
-      </span>
-    );
-  if (s === "docx")
-    return (
-      <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-        DOCX
-      </span>
-    );
-  if (s === "youtube")
-    return (
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white">
-        <MonitorPlay className="h-3 w-3" />
-      </span>
-    );
-  return (
-    <span className="rounded bg-stone-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-stone-600">
-      Text
-    </span>
-  );
-}
+import { SUPPORTED_FORMATS_LABEL } from "@/lib/constants";
+import SourceBadge from "@/components/SourceBadge";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -105,7 +74,7 @@ export default async function DashboardPage() {
               Drop your file here or click to browse
             </p>
             <p className="mt-1 text-xs text-muted">
-              Supported formats: PDF, DOCX, TXT, EPUB (Max 50MB)
+              {`Supported formats: ${SUPPORTED_FORMATS_LABEL} (Max 50MB)`}
             </p>
           </Link>
         </div>
@@ -165,7 +134,7 @@ export default async function DashboardPage() {
                 key={d.id}
                 className="card flex items-center gap-3 px-4 py-3.5"
               >
-                <div className="shrink-0">{typeBadge(d.source_type)}</div>
+                <SourceBadge type={d.source_type} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-ink">
                     {d.title}

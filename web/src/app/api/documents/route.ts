@@ -3,13 +3,13 @@ import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
 import { chunkWords, tokenizeText } from "@/lib/tokenize";
 import { prepareReadableText } from "@/lib/markdown";
+import { defaultYouTubeTitle, extractYouTubeId } from "@/lib/youtube";
+import { markDocumentError, notifyProcessor } from "@/lib/processor";
 
-const PROCESSOR_URL = process.env.PROCESSOR_URL;
-const PROCESSOR_SECRET = process.env.PROCESSOR_SECRET;
+type ClientSourceType = "pdf" | "docx" | "youtube" | "txt" | "text";
 
-type UploadSourceType = "pdf" | "docx" | "youtube" | "txt" | "text";
-
-const PROCESSOR_TYPES: Record<UploadSourceType, string> = {
+/** Client-facing source type -> source type the Python processor expects. */
+const PROCESSOR_TYPES: Record<ClientSourceType, string> = {
   pdf: "pdf",
   docx: "docx",
   youtube: "youtube",
@@ -17,30 +17,35 @@ const PROCESSOR_TYPES: Record<UploadSourceType, string> = {
   text: "text",
 };
 
-function extractYouTubeId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?(?:.*&)?v=)([\w-]{11})/,
-    /(?:youtube\.com\/watch\?v=)([\w-]{11})/,
-    /youtu\.be\/([\w-]{11})/,
-    /youtube\.com\/embed\/([\w-]{11})/,
-    /youtube\.com\/shorts\/([\w-]{11})/,
-    /youtube\.com\/live\/([\w-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
-  return null;
+const VALID_SOURCE_TYPES = Object.keys(PROCESSOR_TYPES) as ClientSourceType[];
+
+function isClientSourceType(value: unknown): value is ClientSourceType {
+  return (
+    typeof value === "string" &&
+    (VALID_SOURCE_TYPES as string[]).includes(value)
+  );
+}
+
+interface CreateDocumentBody {
+  source_type?: unknown;
+  storage_path?: unknown;
+  youtube_url?: unknown;
+  raw_text?: unknown;
+  title?: unknown;
+  format?: unknown;
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function defaultTitle(
-  sourceType: UploadSourceType,
+  sourceType: ClientSourceType,
   storagePath: string | undefined,
   youtubeUrl: string | undefined,
 ): string {
   if (sourceType === "youtube" && youtubeUrl) {
-    const id = extractYouTubeId(youtubeUrl);
-    if (id) return `YouTube – ${id}`;
+    return defaultYouTubeTitle(youtubeUrl);
   }
   if (storagePath) {
     const name = storagePath.split("/").pop() ?? "document";
@@ -49,38 +54,34 @@ function defaultTitle(
   return "Untitled";
 }
 
-/** Plain text / markdown never needs OCR — tokenize and persist in-process. */
+/**
+ * Plain text / Markdown never needs OCR: tokenize and persist in-process
+ * instead of round-tripping through the Python processor.
+ */
 async function processTextInline(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   documentId: string,
   rawText: string,
   opts?: { forceMarkdown?: boolean },
-): Promise<{ word_count: number }> {
-  // Pasted Text / .md: strip Markdown so RSVP shows words, not **bold**
+): Promise<number> {
   const plain = prepareReadableText(rawText, opts?.forceMarkdown === true);
   const words = tokenizeText(plain);
   const paragraphs = chunkWords(words, 80);
 
-  await supabase
-    .from("content_blocks")
-    .delete()
-    .eq("document_id", documentId);
+  await supabase.from("content_blocks").delete().eq("document_id", documentId);
 
   if (paragraphs.length) {
-    const rows = paragraphs.map((pWords, position) => ({
+    const rows = paragraphs.map((paragraphWords, position) => ({
       document_id: documentId,
       position,
-      type: "text",
-      words: pWords,
+      type: "text" as const,
+      words: paragraphWords,
     }));
-    const { error: insertError } = await supabase
-      .from("content_blocks")
-      .insert(rows);
-    if (insertError) throw new Error(insertError.message);
+    const { error } = await supabase.from("content_blocks").insert(rows);
+    if (error) throw new Error(error.message);
   }
 
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from("documents")
     .update({
       status: "ready",
@@ -90,68 +91,54 @@ async function processTextInline(
       updated_at: new Date().toISOString(),
     })
     .eq("id", documentId);
-  if (updateError) throw new Error(updateError.message);
+  if (error) throw new Error(error.message);
 
-  return { word_count: words.length };
-}
-
-async function markError(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  documentId: string,
-  message: string,
-) {
-  await supabase
-    .from("documents")
-    .update({
-      status: "error",
-      error_msg: message,
-      progress_msg: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", documentId);
+  return words.length;
 }
 
 export async function POST(request: NextRequest) {
-  let body: {
-    source_type: UploadSourceType;
-    storage_path?: string;
-    youtube_url?: string;
-    raw_text?: string;
-    title?: string;
-    /** "markdown" forces MD stripping (Pasted Text toggle or .md file). */
-    format?: "text" | "markdown";
-  };
+  let body: CreateDocumentBody;
   try {
-    body = await request.json();
+    body = (await request.json()) as CreateDocumentBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { source_type, storage_path, youtube_url, raw_text, title, format } =
-    body;
-  const sourceType = PROCESSOR_TYPES[source_type];
-  if (!sourceType) {
+  if (!isClientSourceType(body.source_type)) {
     return NextResponse.json(
       { error: "source_type must be pdf, docx, youtube, or txt" },
       { status: 400 },
     );
   }
-  if ((source_type === "pdf" || source_type === "docx") && !storage_path) {
+  const sourceType = body.source_type;
+  const storagePath = asString(body.storage_path);
+  const youtubeUrl = asString(body.youtube_url);
+  const rawText = typeof body.raw_text === "string" ? body.raw_text : undefined;
+  const title = asString(body.title);
+  const format = body.format === "markdown" ? "markdown" : undefined;
+
+  // --- validation -------------------------------------------------
+  if ((sourceType === "pdf" || sourceType === "docx") && !storagePath) {
     return NextResponse.json(
       { error: "storage_path is required for file uploads" },
       { status: 400 },
     );
   }
-  if (source_type === "youtube" && !youtube_url) {
+  if (sourceType === "youtube" && !youtubeUrl) {
     return NextResponse.json(
       { error: "youtube_url is required for youtube sources" },
       { status: 400 },
     );
   }
+  if (sourceType === "youtube" && !extractYouTubeId(youtubeUrl!)) {
+    return NextResponse.json(
+      { error: "Could not parse a YouTube video id from that URL" },
+      { status: 400 },
+    );
+  }
   if (
-    (source_type === "txt" || source_type === "text") &&
-    (!raw_text || !raw_text.trim())
+    (sourceType === "txt" || sourceType === "text") &&
+    (!rawText || !rawText.trim())
   ) {
     return NextResponse.json(
       { error: "raw_text is required for text sources" },
@@ -169,10 +156,8 @@ export async function POST(request: NextRequest) {
 
   const slug = nanoid(8);
   const resolvedTitle =
-    title?.trim() || defaultTitle(source_type, storage_path, youtube_url);
-
-  // Text sources: insert as processing, then finish inline (no OCR / no processor).
-  const isText = sourceType === "text";
+    title ?? defaultTitle(sourceType, storagePath, youtubeUrl);
+  const processorType = PROCESSOR_TYPES[sourceType];
 
   const { data: doc, error } = await supabase
     .from("documents")
@@ -180,10 +165,10 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       slug,
       title: resolvedTitle,
-      source_type: sourceType,
+      source_type: processorType,
       status: "processing",
-      storage_path: storage_path ?? null,
-      source_url: youtube_url ?? null,
+      storage_path: storagePath ?? null,
+      source_url: youtubeUrl ?? null,
     })
     .select("id, slug")
     .single();
@@ -195,16 +180,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (isText && raw_text) {
+  // --- text: finish inline ---------------------------------------
+  if (processorType === "text" && rawText) {
+    const forceMarkdown =
+      format === "markdown" || (title ? /\.md$/i.test(title) : false);
     try {
-      const forceMarkdown =
-        format === "markdown" ||
-        (typeof title === "string" && /\.md$/i.test(title.trim()));
-      await processTextInline(supabase, doc.id, raw_text, { forceMarkdown });
+      await processTextInline(supabase, doc.id, rawText, { forceMarkdown });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to process text";
-      await markError(supabase, doc.id, message);
+      await markDocumentError(supabase, doc.id, message);
       return NextResponse.json({ error: message }, { status: 500 });
     }
     return NextResponse.json(
@@ -213,56 +198,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // PDF / DOCX / YouTube: hand off to the Python processor.
+  // --- everything else: hand off to the processor ----------------
   after(async () => {
-    if (!PROCESSOR_URL || !PROCESSOR_SECRET) {
-      console.error("PROCESSOR_URL / PROCESSOR_SECRET not configured");
-      await markError(
-        supabase,
-        doc.id,
-        "Document processor is not configured. Set PROCESSOR_URL and PROCESSOR_SECRET.",
-      );
-      return;
-    }
-    try {
-      const res = await fetch(`${PROCESSOR_URL}/api/process`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${PROCESSOR_SECRET}`,
-        },
-        body: JSON.stringify({
-          document_id: doc.id,
-          source_type: sourceType,
-          title: resolvedTitle,
-          storage_path,
-          youtube_url,
-          raw_text,
-        }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        console.error("processor returned", res.status, detail);
-        await markError(
-          supabase,
-          doc.id,
-          `Processor failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-        );
-      }
-    } catch (err) {
-      console.error("Failed to notify processor:", err);
-      await markError(
-        supabase,
-        doc.id,
-        err instanceof Error
-          ? `Could not reach processor: ${err.message}`
-          : "Could not reach processor",
-      );
+    const result = await notifyProcessor({
+      document_id: doc.id,
+      source_type: processorType,
+      title: resolvedTitle,
+      storage_path: storagePath,
+      youtube_url: youtubeUrl,
+      raw_text: rawText,
+    });
+    if (!result.ok) {
+      await markDocumentError(supabase, doc.id, result.message);
     }
   });
 
-  return NextResponse.json(
-    { id: doc.id, slug: doc.slug },
-    { status: 201 },
-  );
+  return NextResponse.json({ id: doc.id, slug: doc.slug }, { status: 201 });
 }

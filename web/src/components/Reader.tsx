@@ -3,59 +3,81 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
-  type ReactNode,
 } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import clsx from "clsx";
-import {
-  BookOpen,
-  ChevronDown,
-  Globe,
-  Lock,
-  Minimize,
-  MoreHorizontal,
-  Pause,
-  Pencil,
-  Play,
-  Settings,
-  Share2,
-  SkipBack,
-  SkipForward,
-  Trash2,
-  RefreshCw,
-  Type,
-  X,
-} from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { splitAtORP } from "@/lib/orp";
-import {
-  formatMathDisplay,
-  isComparisonToken,
-  isDefinitionToken,
-  isMathToken,
-  mathDwellMs,
-  SPECIAL_DWELL_MS,
-  splitComparison,
-} from "@/lib/math";
+import { BookOpen, Minimize, X } from "lucide-react";
 
-/** How long graphical figures pause the RSVP stream (not OCR). */
-const IMAGE_DWELL_MS = SPECIAL_DWELL_MS; // 15s — Space to skip
 import {
   getLocalProgress,
-  getRemoteProgress,
-  pctComplete,
   setLocalProgress,
   setRemoteProgress,
+  subscribeToLocalProgress,
 } from "@/lib/progress";
-import { getPreferences, savePreferences } from "@/lib/preferences";
+import {
+  deleteDocument,
+  reprocessDocument,
+  updateDocument,
+} from "@/lib/documents-api";
 import type { ReadItem } from "@/lib/flatten";
-import ShareModal, { type ReaderShareDoc } from "@/components/ShareModal";
+import type { ReaderPrefs } from "@/lib/constants";
+import { WPM_MAX, WPM_MIN, WPM_STEP } from "@/lib/constants";
+import { useReaderEngine } from "@/hooks/useReaderEngine";
+import { useReaderSettings } from "@/hooks/useReaderSettings";
 
+import ShareModal, { type ReaderShareDoc } from "@/components/ShareModal";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import ReaderHeader from "@/components/reader/ReaderHeader";
+import ReaderProgressBar from "@/components/reader/ReaderProgressBar";
+import ReaderControls, {
+  type ReaderPanel,
+} from "@/components/reader/ReaderControls";
+import WordStage from "@/components/reader/WordStage";
+import ImageStage from "@/components/reader/ImageStage";
+import DwellOverlay from "@/components/reader/DwellOverlay";
+import SettingsPanel from "@/components/reader/SettingsPanel";
+
+export interface ReaderDocument {
+  id: string;
+  title: string;
+  visibility: string;
+  user_id: string | null;
+  slug: string;
+}
+
+export interface ReaderProps {
+  document: ReaderDocument;
+  items: ReadItem[];
+  isOwner: boolean;
+  isSignedIn: boolean;
+  userId: string | null;
+  preferences: ReaderPrefs | null;
+  initialIndex?: number;
+  initialWpm?: number;
+}
+
+function clampWpm(value: number): number {
+  return Math.min(WPM_MAX, Math.max(WPM_MIN, value));
+}
+
+/**
+ * RSVP reader.
+ *
+ * Previously a single 1,400-line component that owned the playback state
+ * machine, progress persistence, preference persistence, four popovers and
+ * every piece of markup. The pieces now live in:
+ *
+ *  - `lib/reader-engine.ts`      pure playback transitions (unit tested)
+ *  - `hooks/useReaderEngine`     timers + progress saves
+ *  - `hooks/useReaderSettings`   speed / font / theme / toggles + persistence
+ *  - `components/reader/*`       presentation
+ *
+ * What remains here is composition plus the document-level actions.
+ */
 export default function ReaderClient({
   document: doc,
   items,
@@ -63,86 +85,14 @@ export default function ReaderClient({
   isSignedIn,
   userId,
   preferences,
-  initialIndex,
-  initialWpm,
-}: {
-  document: {
-    id: string;
-    title: string;
-    visibility: string;
-    user_id: string | null;
-    slug: string;
-  };
-  items: ReadItem[];
-  isOwner: boolean;
-  isSignedIn: boolean;
-  userId: string | null;
-  preferences: {
-    default_wpm?: number;
-    font_size?: number;
-    theme?: string | null;
-    show_progress_bar?: boolean | null;
-    highlight_orp?: boolean | null;
-    auto_pause_images?: boolean | null;
-  } | null;
-  initialIndex?: number;
-  initialWpm?: number;
-}) {
+  initialIndex = 0,
+  initialWpm = 800,
+}: ReaderProps) {
   const router = useRouter();
 
-  const [currentIndex, setCurrentIndex] = useState(
-    Math.min(Math.max(initialIndex ?? 0, 0), Math.max(items.length - 1, 0)),
-  );
-  const [playing, setPlaying] = useState(false);
-  const [wpm, setWpm] = useState(
-    Math.min(800, Math.max(100, initialWpm ?? 800)),
-  );
-  const isSmallViewport = useSyncExternalStore(
-    (onStoreChange) => {
-      const mql = window.matchMedia("(max-width: 639px)");
-      mql.addEventListener("change", onStoreChange);
-      return () => mql.removeEventListener("change", onStoreChange);
-    },
-    () => window.matchMedia("(max-width: 639px)").matches,
-    () => false,
-  );
-  const [fontOverride, setFontOverride] = useState<number | null>(null);
-  // Default font is smaller on phones unless the user chooses one explicitly.
-  const fontSize = Math.min(
-    68,
-    Math.max(
-      28,
-      fontOverride ?? preferences?.font_size ?? (isSmallViewport ? 36 : 48),
-    ),
-  );
-  const [theme, setTheme] = useState<string>(preferences?.theme ?? "light");
-  const [showProgressBar, setShowProgressBar] = useState(
-    preferences?.show_progress_bar ?? true,
-  );
-  const [highlightOrp, setHighlightOrp] = useState(
-    preferences?.highlight_orp ?? true,
-  );
-  const [autoPauseImages, setAutoPauseImages] = useState(
-    preferences?.auto_pause_images ?? true,
-  );
-  const [imagePaused, setImagePaused] = useState(false);
-  const [imageRemaining, setImageRemaining] = useState(0);
-  const [mathPaused, setMathPaused] = useState(false);
-  const [mathRemaining, setMathRemaining] = useState(0);
-  const [mathDwell, setMathDwell] = useState(SPECIAL_DWELL_MS);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [wpmOpen, setWpmOpen] = useState(false);
-  const [fontOpen, setFontOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shareSection, setShareSection] = useState<"link" | "visibility">(
-    "link",
-  );
-  const [resumePrompt, setResumePrompt] = useState<{
-    index: number;
-    wpm: number;
-  } | null>(null);
+  const settings = useReaderSettings({ preferences, initialWpm, userId });
+
+  /* ---------------- document-level state ---------------- */
 
   const [title, setTitle] = useState(doc.title);
   const [visibility, setVisibility] = useState(doc.visibility);
@@ -151,310 +101,139 @@ export default function ReaderClient({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openPanel, setOpenPanel] = useState<ReaderPanel | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareSection, setShareSection] = useState<"link" | "visibility">(
+    "link",
+  );
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  /** Set once the reader dismisses or accepts the resume prompt. */
+  const [resumeResolved, setResumeResolved] = useState(false);
 
+  const isPublic = visibility === "public";
   const ownerId = isOwner ? doc.user_id : null;
-  const authUserId = userId;
 
-  const publicDoc = visibility === "public";
+  /* ---------------- progress persistence ---------------- */
 
-  const totalWords = items.filter((i) => i.kind === "word").length;
-  const wordsRead = items
-    .slice(0, currentIndex + 1)
-    .filter((i) => i.kind === "word").length;
-  const pct = pctComplete(wordsRead, totalWords);
-  const wordsLeft = Math.max(0, totalWords - wordsRead);
-  const minsLeft = wordsLeft > 0 ? Math.ceil(wordsLeft / wpm) : 0;
-  const readMinutes = Math.max(1, Math.round(totalWords / Math.max(wpm, 1)));
-
-  const shareDoc: ReaderShareDoc = {
-    id: doc.id,
-    slug: doc.slug,
-    title,
-    visibility: visibility === "public" ? "public" : "private",
-    wordCount: totalWords,
-    readMinutes,
-  };
-
-  const shareModal = (
-    <ShareModal
-      open={shareOpen}
-      onClose={() => setShareOpen(false)}
-      doc={shareDoc}
-      initialSection={shareSection}
-      onVisibilityChange={(v) => setVisibility(v)}
-    />
-  );
-
-  const currentItem = items[currentIndex];
-  const prevItem = currentIndex > 0 ? items[currentIndex - 1] : undefined;
-  const nextItem =
-    currentIndex < items.length - 1 ? items[currentIndex + 1] : undefined;
-
-  const playingRef = useRef(playing);
-  const currentIndexRef = useRef(currentIndex);
-  const imagePausedRef = useRef(imagePaused);
-  const mathPausedRef = useRef(mathPaused);
-  const wpmRef = useRef(wpm);
-  const lastSavedRef = useRef(initialIndex ?? 0);
-  const progressLoadedRef = useRef(false);
-
-  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
-  function getSupabase() {
-    if (!supabaseRef.current) supabaseRef.current = createClient();
-    return supabaseRef.current;
-  }
-
-  function sendSafe(query: PromiseLike<{ error: unknown }>) {
-    query.then(
-      ({ error }) => {
-        if (error) console.warn("Readify sync failed:", error);
-      },
-      (err) => {
-        console.warn("Readify sync failed:", err);
-      },
-    );
-  }
-
+  /**
+   * Signed-in progress is loaded server-side and arrives as `initialIndex`, so
+   * only anonymous readers need the localStorage fallback. The reader used to
+   * re-fetch both progress and preferences from Supabase on mount even though
+   * the page had already provided them.
+   */
   const saveProgress = useCallback(
-    (index: number, speed: number) => {
-      if (authUserId) {
-        setRemoteProgress(doc.id, authUserId, index, speed).then(
-          () => {},
-          (err) => console.warn("Readify sync failed:", err),
-        );
-      } else {
-        setLocalProgress(doc.slug, index, speed);
-      }
-    },
-    [authUserId, doc.id, doc.slug],
-  );
-  const saveProgressRef = useRef(saveProgress);
-
-  useEffect(() => {
-    playingRef.current = playing;
-    currentIndexRef.current = currentIndex;
-    imagePausedRef.current = imagePaused;
-    mathPausedRef.current = mathPaused;
-    wpmRef.current = wpm;
-    saveProgressRef.current = saveProgress;
-  });
-
-  useEffect(
-    () => () =>
-      saveProgressRef.current(currentIndexRef.current, wpmRef.current),
-    [],
-  );
-
-  useEffect(() => {
-    if (resumePrompt) return;
-    if (currentIndex - lastSavedRef.current >= 10) {
-      saveProgress(currentIndex, wpm);
-      lastSavedRef.current = currentIndex;
-    }
-  }, [currentIndex, wpm, saveProgress, resumePrompt]);
-
-  useEffect(() => {
-    if (!authUserId) return;
-    const id = setTimeout(() => {
-      void savePreferences(authUserId, {
-        default_wpm: wpm,
-        font_size: fontSize,
-        theme,
-        show_progress_bar: showProgressBar,
-        highlight_orp: highlightOrp,
-        auto_pause_images: autoPauseImages,
-      });
-    }, 500);
-    return () => clearTimeout(id);
-  }, [
-    authUserId,
-    wpm,
-    fontSize,
-    theme,
-    showProgressBar,
-    highlightOrp,
-    autoPauseImages,
-  ]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("dark", "sepia");
-    if (theme === "dark" || theme === "sepia") {
-      root.classList.add(theme);
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    if (progressLoadedRef.current) return;
-    progressLoadedRef.current = true;
-
-    const clampIndex = (i: number) =>
-      Math.min(Math.max(i, 0), Math.max(items.length - 1, 0));
-    const clampWpm = (w: number) => Math.min(800, Math.max(100, w));
-    const applyProgress = (
-      idx: number,
-      speed: number,
-    ) => {
-      setCurrentIndex(idx);
-      setWpm(clampWpm(speed));
-      setResumePrompt({ index: idx, wpm: clampWpm(speed) });
-    };
-
-    if (authUserId) {
-      Promise.all([
-        getRemoteProgress(doc.id, authUserId),
-        getPreferences(authUserId),
-      ]).then(([progress, prefs]) => {
-        if (prefs) {
-          if (typeof prefs.font_size === "number")
-            setFontOverride(prefs.font_size);
-          if (prefs.theme) setTheme(prefs.theme);
-          if (prefs.show_progress_bar != null)
-            setShowProgressBar(!!prefs.show_progress_bar);
-          if (prefs.highlight_orp != null)
-            setHighlightOrp(!!prefs.highlight_orp);
-          if (prefs.auto_pause_images != null)
-            setAutoPauseImages(!!prefs.auto_pause_images);
-        }
-        if (progress && progress.word_index > 0) {
-          const idx = clampIndex(progress.word_index);
-          applyProgress(idx, progress.wpm);
-          lastSavedRef.current = idx;
-        }
-      });
-    } else {
-      queueMicrotask(() => {
-        const local = getLocalProgress(doc.slug);
-        if (local && local.index > 0) {
-          applyProgress(clampIndex(local.index), local.wpm);
-        }
-      });
-    }
-  }, [authUserId, doc.id, doc.slug, items.length]);
-
-  const goTo = useCallback(
-    (next: number) => {
-      const clamped = Math.min(items.length - 1, Math.max(0, next));
-      setCurrentIndex(clamped);
-      setMathPaused(false);
-      setMathRemaining(0);
-      const item = items[clamped];
-      if (item?.kind === "image" && playingRef.current && autoPauseImages) {
-        setPlaying(false);
-        setImagePaused(true);
-        setImageRemaining(IMAGE_DWELL_MS);
+    (index: number, wpm: number) => {
+      if (!userId) {
+        setLocalProgress(doc.slug, index, wpm);
         return;
       }
-      if (
-        item?.kind === "word" &&
-        isMathToken(item.text) &&
-        playingRef.current
-      ) {
-        const dwell = mathDwellMs(item.text, wpmRef.current);
-        setMathDwell(dwell);
-        setPlaying(false);
-        setMathPaused(true);
-        setMathRemaining(dwell);
-      }
+      setRemoteProgress(doc.id, userId, index, wpm).catch((err) =>
+        console.warn("Readify sync failed:", err),
+      );
     },
-    [items, autoPauseImages],
+    [userId, doc.id, doc.slug],
   );
 
-  const advance = useCallback(() => {
-    const next = currentIndexRef.current + 1;
-    if (next >= items.length) {
-      setPlaying(false);
-      saveProgressRef.current(items.length - 1, wpmRef.current);
-      return;
-    }
-    goTo(next);
-  }, [items.length, goTo]);
+  const engine = useReaderEngine({
+    items,
+    wpm: settings.wpm,
+    autoPauseImages: settings.autoPauseImages,
+    initialIndex,
+    onSaveProgress: saveProgress,
+  });
 
-  useEffect(() => {
-    if (!playing) return;
-    const id = setInterval(advance, 60000 / wpm);
-    return () => clearInterval(id);
-  }, [playing, wpm, advance]);
+  const { seek } = engine;
+  const { setWpm } = settings;
 
-  const resume = useCallback(() => {
-    setImagePaused(false);
-    setImageRemaining(0);
-    setMathPaused(false);
-    setMathRemaining(0);
-    setPlaying(true);
-  }, []);
-
-  useEffect(() => {
-    if (!imagePaused) return;
-    const started = Date.now();
-    const iv = setInterval(() => {
-      setImageRemaining(Math.max(0, IMAGE_DWELL_MS - (Date.now() - started)));
-    }, 200);
-    const t = setTimeout(resume, IMAGE_DWELL_MS);
-    return () => {
-      clearInterval(iv);
-      clearTimeout(t);
-    };
-  }, [imagePaused, resume]);
-
-  useEffect(() => {
-    if (!mathPaused) return;
-    const started = Date.now();
-    const dwell = mathDwell;
-    const iv = setInterval(() => {
-      setMathRemaining(Math.max(0, dwell - (Date.now() - started)));
-    }, 200);
-    const t = setTimeout(resume, dwell);
-    return () => {
-      clearInterval(iv);
-      clearTimeout(t);
-    };
-  }, [mathPaused, mathDwell, resume]);
-
-  const step = useCallback(
-    (delta: number) => {
-      goTo(currentIndexRef.current + delta);
+  /**
+   * Anonymous readers keep their position in localStorage, which is only
+   * readable on the client. Reading it through `useSyncExternalStore` (with a
+   * `0` server snapshot) means the first client render still matches the
+   * server, and no state has to be written from an effect.
+   */
+  const localResumeIndex = useSyncExternalStore(
+    subscribeToLocalProgress,
+    () => {
+      const local = getLocalProgress(doc.slug);
+      return local && local.index > 0 ? local.index : 0;
     },
-    [goTo],
+    () => 0,
   );
 
-  const changeWpm = useCallback((delta: number) => {
-    setWpm((w) => Math.min(800, Math.max(100, w + delta)));
-  }, []);
+  // Signed-in readers get their position from the server-rendered prop.
+  const resumeAt = useMemo(() => {
+    if (resumeResolved) return null;
+    const index = userId ? initialIndex : localResumeIndex;
+    return index > 0
+      ? Math.min(index, Math.max(items.length - 1, 0))
+      : null;
+  }, [resumeResolved, userId, initialIndex, localResumeIndex, items.length]);
 
-  const togglePlay = useCallback(() => {
-    if (imagePausedRef.current || mathPausedRef.current) {
-      resume();
-      return;
+  // Anonymous readers also need their engine moved to the stored position.
+  // This is a sync-to-external-system effect, not derived state.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || userId || localResumeIndex <= 0) return;
+    restoredRef.current = true;
+
+    const local = getLocalProgress(doc.slug);
+    if (!local) return;
+    seek(Math.min(local.index, Math.max(items.length - 1, 0)));
+    setWpm(local.wpm);
+  }, [userId, localResumeIndex, doc.slug, items.length, seek, setWpm]);
+
+  /* ---------------- derived readout ---------------- */
+
+  /**
+   * Word counts come from a prefix sum computed once per document, because the
+   * reader re-renders on every tick (up to ~13 times a second at 800 WPM). The
+   * old code ran `items.filter(...)` plus `items.slice(0, index + 1).filter(...)`
+   * on *every* render, allocating an array as long as the current position.
+   */
+  const wordCounts = useMemo(() => {
+    const prefix = new Uint32Array(items.length + 1);
+    for (let i = 0; i < items.length; i++) {
+      prefix[i + 1] = prefix[i] + (items[i].kind === "word" ? 1 : 0);
     }
-    const item = items[currentIndexRef.current];
-    if (item?.kind === "image" && autoPauseImages && !playingRef.current) {
-      setImagePaused(true);
-      setImageRemaining(IMAGE_DWELL_MS);
-      return;
-    }
-    if (
-      item?.kind === "word" &&
-      isMathToken(item.text) &&
-      !playingRef.current
-    ) {
-      const dwell = mathDwellMs(item.text, wpmRef.current);
-      setMathDwell(dwell);
-      setMathPaused(true);
-      setMathRemaining(dwell);
-      return;
-    }
-    if (playingRef.current) {
-      saveProgressRef.current(currentIndexRef.current, wpmRef.current);
-    }
-    setPlaying((p) => !p);
-  }, [items, autoPauseImages, resume]);
+    return prefix;
+  }, [items]);
+
+  const totalWords = wordCounts[items.length] ?? 0;
+  const wordsRead = wordCounts[Math.min(engine.index + 1, items.length)] ?? 0;
+  const wordsLeft = Math.max(0, totalWords - wordsRead);
+  const percent =
+    totalWords > 0
+      ? Math.min(100, Math.round((wordsRead / totalWords) * 100))
+      : 0;
+  const minutesLeft = settings.wpm > 0 ? Math.ceil(wordsLeft / settings.wpm) : 0;
+
+  const shareDoc: ReaderShareDoc = useMemo(
+    () => ({
+      id: doc.id,
+      slug: doc.slug,
+      title,
+      visibility: isPublic ? "public" : "private",
+      wordCount: totalWords,
+      readMinutes: Math.max(
+        1,
+        Math.round(totalWords / Math.max(settings.wpm, 1)),
+      ),
+    }),
+    [doc.id, doc.slug, title, isPublic, totalWords, settings.wpm],
+  );
+
+  const currentItem = items[engine.index];
+  const prevItem = engine.index > 0 ? items[engine.index - 1] : undefined;
+  const nextItem = items[engine.index + 1];
+
+  /* ---------------- fullscreen ---------------- */
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
+      void document.exitFullscreen().catch(() => {});
     } else {
-      document.documentElement.requestFullscreen().catch(() => {});
+      void document.documentElement.requestFullscreen().catch(() => {});
     }
   }, []);
 
@@ -464,7 +243,24 @@ export default function ReaderClient({
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  /* ---------------- keyboard shortcuts ---------------- */
+
+  const { togglePlay, step, resume } = engine;
+
+  // Current speed, read by the key handler so ArrowUp/Down can report the
+  // clamped value without re-subscribing on every speed change.
+  const wpmRef = useRef(settings.wpm);
   useEffect(() => {
+    wpmRef.current = settings.wpm;
+  });
+
+  useEffect(() => {
+    const nudgeSpeed = (delta: number) => {
+      const next = clampWpm(wpmRef.current + delta);
+      setWpm(next);
+      toast.success(`${next} WPM`, { id: "reader-wpm" });
+    };
+
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (
@@ -475,32 +271,42 @@ export default function ReaderClient({
       ) {
         return;
       }
-      if (e.key === " ") {
-        e.preventDefault();
-        togglePlay();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        step(-1);
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        step(1);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        const next = Math.min(800, wpmRef.current + 25);
-        changeWpm(25);
-        toast.success(`${next} WPM`, { id: "reader-wpm" });
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        const next = Math.max(100, wpmRef.current - 25);
-        changeWpm(-25);
-        toast.success(`${next} WPM`, { id: "reader-wpm" });
-      } else if (e.key === "f" || e.key === "F") {
-        toggleFullscreen();
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          togglePlay();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          step(-1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          step(1);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          nudgeSpeed(WPM_STEP);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          nudgeSpeed(-WPM_STEP);
+          break;
+        case "f":
+        case "F":
+          toggleFullscreen();
+          break;
+        default:
+          break;
       }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [togglePlay, step, changeWpm, toggleFullscreen]);
+  }, [togglePlay, step, setWpm, toggleFullscreen]);
+
+  /* ---------------- document actions ---------------- */
 
   function openShare(section: "link" | "visibility") {
     setShareSection(section);
@@ -508,48 +314,27 @@ export default function ReaderClient({
     setMenuOpen(false);
   }
 
-  function handleResumeAccept() {
-    if (!resumePrompt) return;
-    lastSavedRef.current = resumePrompt.index;
-    setResumePrompt(null);
-    toast.success(
-      `Resumed from word ${resumePrompt.index.toLocaleString()}`,
-    );
-  }
-
-  function handleResumeDismiss() {
-    setCurrentIndex(0);
-    lastSavedRef.current = 0;
-    setResumePrompt(null);
-    toast("Started from the beginning");
-  }
-
-  async function handleRename() {
+  async function commitRename() {
     const next = renameValue.trim() || doc.title;
     setTitle(next);
     setRenaming(false);
     if (!ownerId || next === doc.title) return;
-    sendSafe(
-      getSupabase()
-        .from("documents")
-        .update({ title: next, updated_at: new Date().toISOString() })
-        .eq("id", doc.id),
-    );
-  }
 
+    try {
+      await updateDocument(doc.id, { title: next });
+    } catch (err) {
+      setTitle(doc.title);
+      console.warn("Rename failed:", err);
+      toast.error("Couldn't rename document");
+    }
+  }
 
   async function handleReprocess() {
     if (!isOwner || reprocessing) return;
     setReprocessing(true);
     setMenuOpen(false);
     try {
-      const res = await fetch(`/api/documents/${doc.id}/reprocess`, {
-        method: "POST",
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body.error || "Reprocess failed");
-      }
+      await reprocessDocument(doc.id);
       toast.success("Reprocessing… refresh shortly");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Reprocess failed");
@@ -562,277 +347,71 @@ export default function ReaderClient({
     if (!ownerId) return;
     setDeleting(true);
     try {
-      await getSupabase().from("documents").delete().eq("id", doc.id);
+      // Via the API route so extracted images and the original upload are
+      // cleaned up too — deleting the row directly orphaned every object.
+      await deleteDocument(doc.id);
       router.push("/library");
-    } catch {
+    } catch (err) {
       setDeleting(false);
       setConfirmingDelete(false);
+      toast.error(
+        err instanceof Error ? err.message : "Couldn't delete document",
+      );
     }
   }
 
-  const sideWidth = fontSize * 4.2;
-  const orpWidth = fontSize * 0.72;
+  function acceptResume() {
+    if (resumeAt === null) return;
+    setResumeResolved(true);
+    toast.success(`Resumed from word ${resumeAt.toLocaleString()}`);
+  }
 
-  const Header = (
-    <header className="sticky top-0 z-40 border-b border-black/10 bg-[var(--background)]/90 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-4xl items-center gap-3 px-4">
-        <Link
-          href={authUserId ? "/library" : "/"}
-          className="flex shrink-0 items-center gap-2 text-sm font-bold tracking-tight"
-        >
-          <BookOpen className="h-4 w-4 text-[#4F6EF6]" />
-          Readify
-        </Link>
+  function dismissResume() {
+    seek(0);
+    setResumeResolved(true);
+    toast("Started from the beginning");
+  }
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <span className="hidden min-w-0 max-w-[40vw] truncate text-sm font-medium md:block">
-            {title}
-          </span>
+  /* ---------------- render ---------------- */
 
-          <span
-            className={clsx(
-              "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-              publicDoc
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-200 text-gray-600",
-            )}
-          >
-            {publicDoc ? "Public" : "Private"}
-          </span>
-
-          {isOwner && (
-            <button
-              type="button"
-              onClick={() => openShare("link")}
-              className="flex shrink-0 items-center gap-1 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium transition hover:bg-black/5"
-            >
-              <Share2 className="h-3.5 w-3.5" /> Share
-            </button>
-          )}
-
-          {isOwner && (
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-label="Document menu"
-                className="rounded-lg p-2 transition hover:bg-black/5"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
-              {menuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 z-20 mt-1 w-52 rounded-xl border border-black/10 bg-[var(--background)] p-1.5 shadow-xl">
-                    {renaming ? (
-                      <div className="p-1">
-                        <input
-                          type="text"
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleRename();
-                            if (e.key === "Escape") setRenaming(false);
-                          }}
-                          onFocus={(e) => e.currentTarget.select()}
-                          autoFocus
-                          className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm outline-none focus:border-[#4F6EF6]"
-                        />
-                        <div className="mt-1.5 flex justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setRenaming(false)}
-                            className="rounded-lg px-2.5 py-1 text-xs font-medium text-gray-500 transition hover:bg-black/5"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleRename}
-                            className="rounded-lg bg-[#4F6EF6] px-2.5 py-1 text-xs font-semibold text-white transition hover:brightness-110"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <MenuItem
-                          icon={<Pencil className="h-4 w-4" />}
-                          label="Rename"
-                          onClick={() => {
-                            setRenameValue(title);
-                            setRenaming(true);
-                          }}
-                        />
-                        <MenuItem
-                          icon={
-                            publicDoc ? (
-                              <Lock className="h-4 w-4" />
-                            ) : (
-                              <Globe className="h-4 w-4" />
-                            )
-                          }
-                          label={publicDoc ? "Make private" : "Make public"}
-                          onClick={() => openShare("visibility")}
-                        />
-                        <div className="my-1 border-t border-black/10" />
-                        <MenuItem
-                          icon={<RefreshCw className="h-4 w-4" />}
-                          label={reprocessing ? "Reprocessing…" : "Reprocess"}
-                          onClick={() => handleReprocess()}
-                        />
-                        <MenuItem
-                          icon={<Trash2 className="h-4 w-4 text-indigo-600" />}
-                          label="Delete"
-                          danger
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setConfirmingDelete(true);
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {!isSignedIn && (
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-black/10 bg-black/[0.03] px-4 py-2">
-          <p className="text-xs font-medium sm:text-sm">
-            Sign up to save your reading progress
-          </p>
-          <Link
-            href="/signup"
-            className="rounded-full bg-[#4F6EF6] px-3 py-1 text-xs font-semibold text-white transition hover:brightness-110"
-          >
-            Sign up
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-full border border-black/10 px-3 py-1 text-xs font-semibold text-[#4F6EF6] transition hover:bg-black/5"
-          >
-            Log in
-          </Link>
-        </div>
-      )}
-    </header>
+  const header = (
+    <ReaderHeader
+      title={title}
+      isOwner={isOwner}
+      isPublic={isPublic}
+      isSignedIn={isSignedIn}
+      homeHref={userId ? "/library" : "/"}
+      menuOpen={menuOpen}
+      onToggleMenu={() => setMenuOpen((v) => !v)}
+      onCloseMenu={() => setMenuOpen(false)}
+      renaming={renaming}
+      renameValue={renameValue}
+      onRenameValueChange={setRenameValue}
+      onStartRename={() => {
+        setRenameValue(title);
+        setRenaming(true);
+      }}
+      onCommitRename={() => void commitRename()}
+      onCancelRename={() => setRenaming(false)}
+      onShare={() => openShare("link")}
+      onToggleVisibility={() => openShare("visibility")}
+      onReprocess={() => void handleReprocess()}
+      reprocessing={reprocessing}
+      onDelete={() => {
+        setMenuOpen(false);
+        setConfirmingDelete(true);
+      }}
+    />
   );
 
-  const settingsControls = (
-    <>
-      <div>
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-500">
-            Words per minute
-          </span>
-          <span className="text-sm font-semibold text-gray-900">{wpm} WPM</span>
-        </div>
-        <input
-          type="range"
-          min={100}
-          max={800}
-          step={25}
-          value={wpm}
-          onChange={(e) => setWpm(Number(e.target.value))}
-          className="w-full accent-[#4F6EF6]"
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-gray-400">
-          <span>100</span>
-          <span>800</span>
-        </div>
-      </div>
-
-      <div>
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-500">Font size</span>
-          <span className="flex items-center gap-1 text-sm font-semibold text-gray-900">
-            <Type className="h-3.5 w-3.5" /> {fontSize}px
-          </span>
-        </div>
-        <input
-          type="range"
-          min={28}
-          max={68}
-          step={4}
-          value={fontSize}
-          onChange={(e) => setFontOverride(Number(e.target.value))}
-          className="w-full accent-[#4F6EF6]"
-        />
-        <div className="mt-1 flex justify-between text-[10px] text-gray-400">
-          <span>28</span>
-          <span>68</span>
-        </div>
-      </div>
-
-      <div>
-        <div className="mb-1.5 text-xs font-medium text-gray-500">Theme</div>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { id: "light", label: "Light" },
-            { id: "dark", label: "Dark" },
-            { id: "sepia", label: "Sepia" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => {
-                setTheme(t.id);
-                toast.success(`${t.label} theme`, { id: "reader-theme" });
-              }}
-              className={clsx(
-                "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
-                theme === t.id
-                  ? "border-[#4F6EF6] bg-[#4F6EF6] text-white"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300",
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2.5">
-        <SettingRow
-          label="Show progress bar"
-          checked={showProgressBar}
-          onChange={(v) => {
-            setShowProgressBar(v);
-            toast.success(v ? "Progress bar on" : "Progress bar off", {
-              id: "reader-toggle",
-            });
-          }}
-        />
-        <SettingRow
-          label="Highlight ORP char"
-          checked={highlightOrp}
-          onChange={(v) => {
-            setHighlightOrp(v);
-            toast.success(v ? "ORP highlight on" : "ORP highlight off", {
-              id: "reader-toggle",
-            });
-          }}
-        />
-        <SettingRow
-          label="Auto-pause images (15s)"
-          checked={autoPauseImages}
-          onChange={(v) => {
-            setAutoPauseImages(v);
-            toast.success(v ? "Auto-pause on" : "Auto-pause off", {
-              id: "reader-toggle",
-            });
-          }}
-        />
-      </div>
-    </>
+  const shareModal = (
+    <ShareModal
+      open={shareOpen}
+      onClose={() => setShareOpen(false)}
+      doc={shareDoc}
+      initialSection={shareSection}
+      onVisibilityChange={setVisibility}
+    />
   );
 
   if (items.length === 0) {
@@ -841,7 +420,7 @@ export default function ReaderClient({
         className="flex min-h-screen flex-col"
         style={{ background: "var(--background)", color: "var(--foreground)" }}
       >
-        {Header}
+        {header}
         <main className="flex flex-1 items-center justify-center px-6 text-center">
           <div>
             <BookOpen className="mx-auto h-10 w-10 text-gray-400" />
@@ -860,403 +439,58 @@ export default function ReaderClient({
       className="flex min-h-screen flex-col"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
-      {!isFullscreen && Header}
+      {!isFullscreen && header}
 
-      {showProgressBar && (
-        <div className="mx-auto w-full max-w-3xl px-6 pb-1 pt-3">
-          <div className="h-[3px] w-full overflow-hidden rounded-full bg-gray-200/70">
-            <div
-              className="h-full rounded-full bg-[#4F6EF6] transition-all duration-200"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-            <span>
-              {pct}% complete · {currentIndex + 1}/{items.length}
-            </span>
-            <span>
-              {wordsLeft.toLocaleString()} words · {minsLeft} min left
-            </span>
-          </div>
-        </div>
+      {settings.showProgressBar && (
+        <ReaderProgressBar
+          percent={percent}
+          wordsLeft={wordsLeft}
+          minutesLeft={minutesLeft}
+          index={engine.index}
+          total={items.length}
+        />
       )}
 
       <main className="flex flex-1 flex-col items-center justify-center px-4">
         {currentItem?.kind === "image" ? (
-          <div className="flex w-full max-w-3xl flex-col items-center">
-            <div className="card w-full overflow-hidden p-3 sm:p-4">
-            <img
-              src={currentItem.url}
-              alt="Document figure"
-              className="max-h-[min(70vh,28rem)] w-full rounded-xl object-contain"
-            />
-            </div>
-            {imagePaused && autoPauseImages && (
-              <div className="mt-5 flex flex-col items-center gap-2">
-                <div className="flex items-center gap-2 rounded-full border border-line bg-bg-elevated px-4 py-2 text-sm text-ink shadow-sm">
-                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[#4F6EF6]/15 text-xs font-bold text-[#4F6EF6]">
-                    {Math.max(1, Math.round(imageRemaining / 1000))}
-                  </span>
-                  <span className="text-muted">Figure pause</span>
-                  <button
-                    type="button"
-                    onClick={resume}
-                    className="rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink-inv transition hover:opacity-90"
-                  >
-                    Continue
-                  </button>
-                </div>
-              </div>
+          <ImageStage url={currentItem.url}>
+            {engine.dwell === "image" && settings.autoPauseImages && (
+              <DwellOverlay
+                state={engine.state}
+                label="Figure pause"
+                onContinue={resume}
+              />
             )}
-          </div>
+          </ImageStage>
         ) : (
-          <div
-            className="flex w-full max-w-3xl flex-col items-center justify-center"
-            style={{ height: 240 }}
-          >
-            <div
-              className="flex h-[40%] w-full items-center justify-center overflow-hidden"
-              style={{
-                fontSize: fontSize * 0.6,
-                color: "var(--muted-foreground)",
-                opacity: 0.3,
-              }}
-            >
-              <span className="truncate">
-                {prevItem && prevItem.kind === "word" ? prevItem.text : ""}
-              </span>
-            </div>
-
-            <div className="relative flex w-full items-center justify-center">
-              {currentItem?.kind === "word" &&
-              isMathToken(currentItem.text) ? (
-                <div className="flex w-full max-w-4xl flex-col items-center gap-2 px-4">
-                  {isComparisonToken(currentItem.text) &&
-                  splitComparison(currentItem.text) ? (
-                    // Stacked magnetic ⇔ electric comparison
-                    <div className="grid w-full gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-line bg-bg-elevated px-4 py-3 text-center">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                          Magnetic
-                        </p>
-                        <p
-                          className="font-semibold leading-snug"
-                          style={{
-                            fontSize: Math.min(fontSize * 0.85, 32),
-                            color: "var(--color-orp, #4f46e5)",
-                          }}
-                        >
-                          {formatMathDisplay(
-                            splitComparison(currentItem.text)!.left,
-                          )}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-line bg-bg-elevated px-4 py-3 text-center">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                          Electric
-                        </p>
-                        <p
-                          className="font-semibold leading-snug"
-                          style={{
-                            fontSize: Math.min(fontSize * 0.85, 32),
-                            color: "var(--color-orp, #4f46e5)",
-                          }}
-                        >
-                          {formatMathDisplay(
-                            splitComparison(currentItem.text)!.right,
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  ) : isDefinitionToken(currentItem.text) ? (
-                    <div className="w-full max-w-xl rounded-2xl border border-line bg-bg-elevated px-5 py-4 text-center">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                        Definition
-                      </p>
-                      <p
-                        className="mt-1 font-semibold leading-snug"
-                        style={{
-                          fontSize: Math.min(fontSize * 0.8, 30),
-                          color: "var(--color-ink, inherit)",
-                        }}
-                      >
-                        {formatMathDisplay(currentItem.text)}
-                      </p>
-                    </div>
-                  ) : (
-                    <div
-                      className="max-w-full text-center font-semibold tracking-tight"
-                      style={{
-                        fontSize: Math.min(
-                          fontSize,
-                          Math.max(22, 52 - currentItem.text.length / 2.5),
-                        ),
-                        lineHeight: 1.3,
-                        color: "var(--color-orp, #4f46e5)",
-                      }}
-                    >
-                      {formatMathDisplay(currentItem.text)}
-                    </div>
-                  )}
-                  {mathPaused && (
-                    <div className="mt-2 flex items-center gap-2 rounded-full border border-line bg-bg-elevated px-4 py-2 text-sm shadow-sm">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-orp/15 text-xs font-bold text-orp">
-                        {Math.max(1, Math.round(mathRemaining / 1000))}
-                      </span>
-                      <span className="text-muted">Formula pause</span>
-                      <button
-                        type="button"
-                        onClick={resume}
-                        className="rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink-inv transition hover:opacity-90"
-                      >
-                        Continue
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div
-                    className="absolute inset-y-[-14px] w-px bg-indigo-400/25"
-                    style={{ left: `calc(50% - ${orpWidth / 2}px)` }}
-                  />
-                  <div
-                    className="absolute -top-[14px] h-1 w-1 rounded-full bg-[#4f46e5]"
-                    style={{ left: `calc(50% - 2px)` }}
-                  />
-                  <div
-                    className="relative flex"
-                    style={{ fontSize, lineHeight: 1.1, fontWeight: 600 }}
-                  >
-                    <span
-                      style={{ width: sideWidth, textAlign: "right" }}
-                      className="whitespace-pre"
-                    >
-                      {currentItem?.kind === "word"
-                        ? splitAtORP(currentItem.text).before
-                        : ""}
-                    </span>
-                    <span
-                      style={{
-                        width: orpWidth,
-                        textAlign: "center",
-                        fontWeight: highlightOrp ? 800 : 600,
-                        color: highlightOrp ? "#4F6EF6" : "inherit",
-                      }}
-                    >
-                      {currentItem?.kind === "word"
-                        ? splitAtORP(currentItem.text).orp
-                        : ""}
-                    </span>
-                    <span
-                      style={{ width: sideWidth, textAlign: "left" }}
-                      className="whitespace-pre"
-                    >
-                      {currentItem?.kind === "word"
-                        ? splitAtORP(currentItem.text).after
-                        : ""}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div
-              className="flex h-[40%] w-full items-center justify-center overflow-hidden"
-              style={{
-                fontSize: fontSize * 0.6,
-                color: "var(--muted-foreground)",
-                opacity: 0.3,
-              }}
-            >
-              <span className="truncate">
-                {nextItem?.kind === "image"
-                  ? "↓ image next"
-                  : nextItem?.kind === "word" && isMathToken(nextItem.text)
-                    ? "↓ formula next"
-                    : nextItem?.kind === "word"
-                      ? nextItem.text
-                      : ""}
-              </span>
-            </div>
-          </div>
+          <>
+            <WordStage
+              current={currentItem}
+              previous={prevItem}
+              next={nextItem}
+              fontSize={settings.fontSize}
+              highlightOrp={settings.highlightOrp}
+            />
+            {engine.dwell === "math" && (
+              <DwellOverlay
+                state={engine.state}
+                label="Formula pause"
+                onContinue={resume}
+              />
+            )}
+          </>
         )}
       </main>
 
       <div className="flex flex-col items-center gap-3 pb-6 pt-2">
-        <div className="flex items-center justify-center gap-2 md:gap-5">
-          <input
-            type="range"
-            min={100}
-            max={800}
-            step={25}
-            value={wpm}
-            onChange={(e) => setWpm(Number(e.target.value))}
-            className="hidden w-28 accent-[#4F6EF6] md:block"
-          />
-
-          <div className="relative hidden md:block">
-            <button
-              type="button"
-              onClick={() => setWpmOpen((v) => !v)}
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-black/5"
-            >
-              {wpm} WPM
-              <ChevronDown
-                className={clsx("h-3.5 w-3.5 transition", wpmOpen && "rotate-180")}
-              />
-            </button>
-            {wpmOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setWpmOpen(false)}
-                />
-                <div className="absolute bottom-10 left-1/2 z-20 w-56 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-500">
-                      Words per minute
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {wpm}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={100}
-                    max={800}
-                    step={25}
-                    value={wpm}
-                    onChange={(e) => setWpm(Number(e.target.value))}
-                    className="mt-2 w-full accent-[#4F6EF6]"
-                  />
-                  <div className="mt-3 grid grid-cols-4 gap-1.5">
-                    {[200, 400, 600, 800].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => {
-                          setWpm(preset);
-                          toast.success(`${preset} WPM`, {
-                            id: "reader-wpm",
-                          });
-                        }}
-                        className={clsx(
-                          "rounded-lg px-1 py-1.5 text-xs font-semibold transition",
-                          wpm === preset
-                            ? "bg-[#4F6EF6] text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200",
-                        )}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => step(-1)}
-            aria-label="Previous word"
-            className="flex h-12 w-12 items-center justify-center rounded-full text-gray-600 transition hover:bg-black/5"
-          >
-            <SkipBack className="h-5 w-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={togglePlay}
-            aria-label={playing ? "Pause" : "Play"}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#4F6EF6] text-white shadow-lg shadow-[#4F6EF6]/30 transition md:bg-black md:shadow-black/20"
-          >
-            {playing ? (
-              <Pause className="h-6 w-6" />
-            ) : (
-              <Play className="ml-0.5 h-6 w-6" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => step(1)}
-            aria-label="Next word"
-            className="flex h-12 w-12 items-center justify-center rounded-full text-gray-600 transition hover:bg-black/5"
-          >
-            <SkipForward className="h-5 w-5" />
-          </button>
-
-          <div className="relative hidden md:block">
-            <button
-              type="button"
-              onClick={() => setFontOpen((v) => !v)}
-              aria-label="Font size"
-              className="rounded-lg p-2 text-gray-700 transition hover:bg-black/5"
-            >
-              <Type className="h-5 w-5" />
-            </button>
-            {fontOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setFontOpen(false)}
-                />
-                <div className="absolute bottom-10 left-1/2 z-20 w-56 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-500">
-                      Font size
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {fontSize}px Aa
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={28}
-                    max={68}
-                    step={4}
-                    value={fontSize}
-                    onChange={(e) => setFontOverride(Number(e.target.value))}
-                    className="mt-2 w-full accent-[#4F6EF6]"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="relative hidden md:block">
-            <button
-              type="button"
-              onClick={() => setShowSettings((v) => !v)}
-              aria-label="Reading settings"
-              className="rounded-lg p-2 text-gray-700 transition hover:bg-black/5"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
-            {showSettings && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowSettings(false)}
-                />
-                <div className="absolute bottom-10 left-1/2 z-20 w-72 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
-                  <div className="space-y-4">{settingsControls}</div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowSettings((v) => !v)}
-            aria-label="Reading settings"
-            className="flex h-12 w-12 items-center justify-center rounded-lg text-gray-700 transition hover:bg-black/5 md:hidden"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
-        </div>
+        <ReaderControls
+          settings={settings}
+          playing={engine.playing}
+          openPanel={openPanel}
+          setOpenPanel={setOpenPanel}
+          onStep={step}
+          onTogglePlay={togglePlay}
+        />
 
         {!isFullscreen && (
           <p className="hidden text-xs text-gray-400 md:block">
@@ -1279,74 +513,57 @@ export default function ReaderClient({
         </div>
       )}
 
-      {showSettings && (
+      {/* Mobile settings sheet — the desktop equivalent is a popover. */}
+      {openPanel === "settings" && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
             className="absolute inset-0 bg-black/40"
-            onClick={() => setShowSettings(false)}
+            onClick={() => setOpenPanel(null)}
+            aria-hidden="true"
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-5 pb-8 shadow-2xl">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Reading settings"
+            className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-5 pb-8 shadow-2xl"
+          >
             <div className="mb-4 flex items-center justify-between">
               <span className="text-base font-semibold text-gray-900">
                 Reading settings
               </span>
               <button
                 type="button"
-                onClick={() => setShowSettings(false)}
+                onClick={() => setOpenPanel(null)}
                 aria-label="Close settings"
                 className="flex h-12 w-12 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-5">{settingsControls}</div>
-          </div>
-        </div>
-      )}
-
-      {confirmingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setConfirmingDelete(false)}
-          />
-          <div className="relative w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
-            <h3 className="text-base font-semibold text-gray-900">
-              Delete document?
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              “{title}” will be permanently removed. Shared links will stop
-              working.
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(false)}
-                className="rounded-lg px-3.5 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-              >
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
+            <div className="space-y-5">
+              <SettingsPanel settings={settings} />
             </div>
           </div>
         </div>
       )}
 
+      {confirmingDelete && (
+        <ConfirmDeleteDialog
+          title={title}
+          deleting={deleting}
+          onCancel={() => setConfirmingDelete(false)}
+          onConfirm={() => void handleDelete()}
+        />
+      )}
+
       {shareModal}
 
-      {resumePrompt && (
+      {resumeAt !== null && (
         <div className="fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
           <div className="flex w-full max-w-sm items-center gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-2xl">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-gray-900">
-                Resume from word {resumePrompt.index.toLocaleString()}?
+                Resume from word {resumeAt.toLocaleString()}?
               </p>
               <p className="text-xs text-gray-500">
                 Pick up where you left off, or start from the top.
@@ -1355,14 +572,14 @@ export default function ReaderClient({
             <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
-                onClick={handleResumeDismiss}
+                onClick={dismissResume}
                 className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-black/5"
               >
                 Start over
               </button>
               <button
                 type="button"
-                onClick={handleResumeAccept}
+                onClick={acceptResume}
                 className="rounded-lg bg-[#4F6EF6] px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
               >
                 Resume
@@ -1372,64 +589,5 @@ export default function ReaderClient({
         </div>
       )}
     </div>
-  );
-}
-
-function SettingRow({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between"
-    >
-      <span className="text-sm font-medium">{label}</span>
-      <span
-        className={clsx(
-          "relative h-5 w-9 rounded-full transition",
-          checked ? "bg-[#4F6EF6]" : "bg-gray-300",
-        )}
-      >
-        <span
-          className={clsx(
-            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition",
-            checked ? "left-[18px]" : "left-0.5",
-          )}
-        />
-      </span>
-    </button>
-  );
-}
-
-function MenuItem({
-  icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={clsx(
-        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition",
-        danger ? "text-indigo-600 hover:bg-red-50" : "hover:bg-black/5",
-      )}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

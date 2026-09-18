@@ -1,19 +1,15 @@
 import { createClient } from "@/lib/supabase/client";
 import type { ReadingPreferences } from "@/types";
 
-export async function getPreferences(
-  userId: string,
-): Promise<ReadingPreferences | null> {
-  const { data, error } = await createClient()
-    .from("reading_preferences")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data as ReadingPreferences;
-}
-
+/**
+ * Persist preferences from the reader.
+ *
+ * Fire-and-forget by design: the reader saves on a debounce while the user
+ * reads, so a failed write must not interrupt playback. Failures are logged.
+ *
+ * Reading preferences back is done by the server components that already need
+ * them (`settings`, `c/[slug]`), so there is no browser-side getter here.
+ */
 export async function savePreferences(
   userId: string,
   prefs: Partial<ReadingPreferences>,
@@ -25,7 +21,6 @@ export async function savePreferences(
   });
 
   if (error) {
-    // Matches the reader's existing "fire-and-forget" sync behavior.
     console.warn("Save preferences failed:", error);
   }
 }

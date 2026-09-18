@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { looksLikeMarkdown, prepareReadableText } from "@/lib/markdown";
 import toast from "react-hot-toast";
 import clsx from "clsx";
-import {
-  AlignLeft,
-  FileText,
-  Loader2,
-  Play,
-  type LucideIcon,
-} from "lucide-react";
+import { AlignLeft, FileText, Loader2, Play, type LucideIcon } from "lucide-react";
 import DragDrop from "@/components/DragDrop";
 import { createClient } from "@/lib/supabase/client";
+import { extractYouTubeId } from "@/lib/youtube";
+import {
+  createDocument,
+  type CreatedDocument,
+  type UploadSourceType,
+} from "@/lib/documents-api";
+import { useDocumentStatusPolling } from "@/hooks/useDocumentStatusPolling";
+import { SOURCE_BUCKET } from "@/lib/constants";
+import type { ProcessingStatus } from "@/types";
 
 type Tab = "document" | "youtube" | "text";
 type Phase = "idle" | "uploading" | "processing";
@@ -21,7 +24,7 @@ type Phase = "idle" | "uploading" | "processing";
 interface PendingDoc {
   id: string;
   slug: string;
-  status: "processing" | "ready" | "error";
+  status: ProcessingStatus;
   progress_msg?: string | null;
   error_msg?: string | null;
 }
@@ -32,47 +35,58 @@ const TABS: { id: Tab; label: string; icon: LucideIcon; color: string }[] = [
   { id: "text", label: "Text / Markdown", icon: AlignLeft, color: "text-gray-400" },
 ];
 
-function extractVideoId(url: string): string | null {
-  // Accept the common paste shape: youtube.com/watch?v=ID (no extra & before v=)
-  const patterns = [
-    /(?:youtube\.com\/watch\?(?:.*&)?v=)([\w-]{11})/,
-    /(?:youtube\.com\/watch\?v=)([\w-]{11})/,
-    /youtu\.be\/([\w-]{11})/,
-    /youtube\.com\/embed\/([\w-]{11})/,
-    /youtube\.com\/shorts\/([\w-]{11})/,
-    /youtube\.com\/live\/([\w-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
-  return null;
-}
-
 function titleFromFilename(name: string): string {
   return name.replace(/\.[^.]+$/, "") || "Untitled document";
 }
 
-async function postDocument(body: Record<string, unknown>) {
-  return fetch("/api/documents", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+function extensionOf(file: File): string {
+  return file.name.split(".").pop()?.toLowerCase() ?? "";
 }
 
+/**
+ * Upload the user's file straight to Supabase Storage from the browser so the
+ * bytes never pass through the Next.js server. Returns the storage path.
+ */
 async function uploadFile(file: File): Promise<string> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in");
+
   const path = `${user.id}/${Date.now()}-${file.name}`;
   const { error } = await supabase.storage
-    .from("documents")
+    .from(SOURCE_BUCKET)
     .upload(path, file, { upsert: false });
   if (error) throw new Error(error.message);
   return path;
+}
+
+/** Turn one picked file into a document, choosing the right pipeline. */
+async function createFromFile(file: File): Promise<CreatedDocument> {
+  const ext = extensionOf(file);
+
+  if (ext === "txt" || ext === "md") {
+    return createDocument({
+      source_type: "txt",
+      raw_text: await file.text(),
+      title: titleFromFilename(file.name),
+      format: ext === "md" ? "markdown" : "text",
+    });
+  }
+
+  if (ext === "epub") {
+    throw new Error(
+      "EPUB processing isn't supported yet — please convert it to PDF or DOCX.",
+    );
+  }
+
+  const sourceType: UploadSourceType = ext === "docx" ? "docx" : "pdf";
+  return createDocument({
+    source_type: sourceType,
+    storage_path: await uploadFile(file),
+    title: titleFromFilename(file.name),
+  });
 }
 
 export default function UploadPage() {
@@ -87,169 +101,137 @@ export default function UploadPage() {
   // YouTube tab
   const [ytTitle, setYtTitle] = useState("");
   const [ytUrl, setYtUrl] = useState("");
-  const videoId = extractVideoId(ytUrl);
 
   // Text tab
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
   const [treatAsMarkdown, setTreatAsMarkdown] = useState(true);
-  const wordCount = textContent.trim()
-    ? prepareReadableText(textContent, treatAsMarkdown)
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean).length
-    : 0;
+
+  const videoId = extractYouTubeId(ytUrl);
+
+  // Counting words means running the Markdown stripper over the whole textarea.
+  // Defer it so a large paste never blocks the keystroke that triggered it.
+  const deferredContent = useDeferredValue(textContent);
+  const wordCount = useMemo(() => {
+    if (!deferredContent.trim()) return 0;
+    return prepareReadableText(deferredContent, treatAsMarkdown)
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length;
+  }, [deferredContent, treatAsMarkdown]);
 
   const [pendingDocs, setPendingDocs] = useState<PendingDoc[]>([]);
   const pendingRef = useRef<PendingDoc[]>([]);
 
-  useEffect(() => {
-    if (phase !== "processing") return;
-    let cancelled = false;
+  const setPending = useCallback((next: PendingDoc[]) => {
+    pendingRef.current = next;
+    setPendingDocs(next);
+  }, []);
 
-    const tick = async () => {
-      const results = await Promise.all(
-        pendingRef.current.map(async (doc) => {
-          try {
-            const res = await fetch(`/api/documents/${doc.id}/status`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            return {
-              status: data.status as PendingDoc["status"],
-              progress_msg: data.progress_msg,
-              error_msg: data.error_msg,
-            };
-          } catch {
-            return null;
+  // Poll while any uploaded document is still processing.
+  const processingIds = useMemo(
+    () =>
+      phase === "processing"
+        ? pendingDocs.filter((d) => d.status === "processing").map((d) => d.id)
+        : [],
+    [phase, pendingDocs],
+  );
+
+  useDocumentStatusPolling(processingIds, (updates) => {
+    const current = pendingRef.current;
+    const updated = current.map((doc) => {
+      const found = updates.find((u) => u.id === doc.id);
+      return found
+        ? {
+            ...doc,
+            status: found.status,
+            progress_msg: found.progress_msg,
+            error_msg: found.error_msg,
           }
-        }),
+        : doc;
+    });
+    setPending(updated);
+
+    if (updated.some((d) => d.status === "processing")) return;
+
+    const failed = updated.find((d) => d.status === "error");
+    if (failed) {
+      toast.error(
+        failed.error_msg ||
+          "Something went wrong while processing your document.",
       );
-      if (cancelled) return;
-
-      const updated = pendingRef.current.map((doc, i) => {
-        const r = results[i];
-        return r
-          ? { ...doc, status: r.status, progress_msg: r.progress_msg, error_msg: r.error_msg }
-          : doc;
-      });
-      pendingRef.current = updated;
-      setPendingDocs(updated);
-
-      const done = updated.every((d) => d.status !== "processing");
-      if (!done) return;
-
-      const failed = updated.find((d) => d.status === "error");
-      if (failed) {
-        toast.error(
-          failed.error_msg || "Something went wrong while processing your document.",
-        );
-        setPhase("idle");
-        return;
-      }
-
+      setPhase("idle");
+      return;
+    }
+    if (updated.length) {
       router.push(`/c/${updated[updated.length - 1].slug}`);
-    };
+    }
+  });
 
-    const interval = setInterval(tick, 2000);
-    tick();
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [phase, router]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const validate = useCallback((): boolean => {
     if (tab === "document" && files.length === 0) {
       toast.error("Choose at least one file to upload.");
-      return;
+      return false;
     }
     if (tab === "youtube") {
       if (!ytTitle.trim()) {
         toast.error("Give your video a title.");
-        return;
+        return false;
       }
       if (!videoId) {
         toast.error("Enter a valid YouTube URL.");
-        return;
+        return false;
       }
     }
     if (tab === "text") {
       if (!textTitle.trim()) {
         toast.error("Give your text a title.");
-        return;
+        return false;
       }
       if (!textContent.trim()) {
         toast.error("Paste some text to upload.");
-        return;
+        return false;
       }
     }
+    return true;
+  }, [tab, files, ytTitle, videoId, textTitle, textContent]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
 
     setPhase("uploading");
 
     try {
-      const created: {
-        id: string;
-        slug: string;
-        status?: "processing" | "ready" | "error";
-      }[] = [];
+      const created: CreatedDocument[] = [];
 
       if (tab === "document") {
         for (const file of files) {
-          const ext = file.name.split(".").pop()?.toLowerCase();
-
-          if (ext === "txt" || ext === "md") {
-            const res = await postDocument({
-              source_type: "txt",
-              raw_text: await file.text(),
-              title: titleFromFilename(file.name),
-              format: ext === "md" ? "markdown" : "text",
-            });
-            if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
-            created.push(await res.json());
-            continue;
-          }
-
-          if (ext === "epub") {
-            throw new Error(
-              "EPUB processing isn't supported yet — please convert it to PDF or DOCX.",
-            );
-          }
-
-          const res = await postDocument({
-            source_type: ext === "docx" ? "docx" : "pdf",
-            storage_path: await uploadFile(file),
-            title: titleFromFilename(file.name),
-          });
-          if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
-          created.push(await res.json());
+          created.push(await createFromFile(file));
         }
       } else if (tab === "youtube") {
-        const res = await postDocument({
-          source_type: "youtube",
-          youtube_url: ytUrl.trim(),
-          title: ytTitle.trim(),
-        });
-        if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
-        created.push(await res.json());
+        created.push(
+          await createDocument({
+            source_type: "youtube",
+            youtube_url: ytUrl.trim(),
+            title: ytTitle.trim(),
+          }),
+        );
       } else {
-        const asMarkdown =
-          treatAsMarkdown || looksLikeMarkdown(textContent);
-        const res = await postDocument({
-          source_type: "txt",
-          raw_text: textContent,
-          title: textTitle.trim(),
-          format: asMarkdown ? "markdown" : "text",
-        });
-        if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
-        created.push(await res.json());
+        const asMarkdown = treatAsMarkdown || looksLikeMarkdown(textContent);
+        created.push(
+          await createDocument({
+            source_type: "txt",
+            raw_text: textContent,
+            title: textTitle.trim(),
+            format: asMarkdown ? "markdown" : "text",
+          }),
+        );
       }
 
-      // Plain text is processed inline and returns status: "ready" immediately —
-      // no OCR and no processor round-trip.
-      const allReady = created.every((c) => c.status === "ready");
-      if (allReady) {
+      // Plain text is processed inline and comes back ready immediately, so
+      // there is nothing to poll for.
+      if (created.every((c) => c.status === "ready")) {
         toast.success(
           created.length > 1
             ? `Added ${created.length} documents`
@@ -259,11 +241,12 @@ export default function UploadPage() {
         return;
       }
 
-      pendingRef.current = created.map((c) => ({
-        ...c,
-        status: (c.status as PendingDoc["status"]) || "processing",
-      }));
-      setPendingDocs(pendingRef.current);
+      setPending(
+        created.map((c) => ({
+          ...c,
+          status: c.status ?? "processing",
+        })),
+      );
       setPhase("processing");
       toast.success(
         created.length > 1
@@ -287,11 +270,11 @@ export default function UploadPage() {
         Add to your library
       </h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        Upload a file (PDF, DOCX, TXT, Markdown), paste a YouTube link, or paste text / Markdown.
+        Upload a file (PDF, DOCX, TXT, Markdown), paste a YouTube link, or paste
+        text / Markdown.
       </p>
 
       <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
-        {/* Tabs */}
         <div className="flex border-b border-gray-200">
           {TABS.map(({ id, label, icon: Icon, color }) => (
             <button
@@ -328,70 +311,50 @@ export default function UploadPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {tab === "document" && (
-                <DragDrop onFiles={(next) => setFiles(next)} />
-              )}
+              {tab === "document" && <DragDrop onFiles={setFiles} />}
 
               {tab === "youtube" && (
                 <>
-                  <div>
-                    <label
-                      htmlFor="yt-title"
-                      className="mb-1.5 block text-sm font-medium text-gray-700"
-                    >
-                      Title
-                    </label>
+                  <Field label="Title" htmlFor="yt-title">
                     <input
                       id="yt-title"
                       type="text"
                       value={ytTitle}
                       onChange={(e) => setYtTitle(e.target.value)}
                       placeholder="Give your video a title…"
-                      className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className={INPUT_CLASS}
                     />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="yt-url"
-                      className="mb-1.5 block text-sm font-medium text-gray-700"
-                    >
-                      YouTube URL
-                    </label>
+                  </Field>
+                  <Field label="YouTube URL" htmlFor="yt-url">
                     <input
                       id="yt-url"
                       type="url"
                       value={ytUrl}
                       onChange={(e) => setYtUrl(e.target.value)}
                       placeholder="Paste a YouTube URL…"
-                      className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className={INPUT_CLASS}
                     />
                     {videoId && (
                       <p className="mt-1.5 text-xs font-medium text-indigo-600">
                         Video: {videoId}
                       </p>
                     )}
-                  </div>
+                  </Field>
                 </>
               )}
 
               {tab === "text" && (
                 <>
-                  <div>
-                    <label
-                      htmlFor="text-title"
-                      className="mb-1.5 block text-sm font-medium text-gray-700"
-                    >
-                      Title
-                    </label>
+                  <Field label="Title" htmlFor="text-title">
                     <input
                       id="text-title"
                       type="text"
                       value={textTitle}
                       onChange={(e) => setTextTitle(e.target.value)}
                       placeholder="Give your text a title…"
-                      className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className={INPUT_CLASS}
                     />
-                  </div>
+                  </Field>
                   <div>
                     <div className="mb-1.5 flex items-center justify-between gap-3">
                       <label
@@ -448,6 +411,31 @@ export default function UploadPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const INPUT_CLASS =
+  "w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label
+        htmlFor={htmlFor}
+        className="mb-1.5 block text-sm font-medium text-gray-700"
+      >
+        {label}
+      </label>
+      {children}
     </div>
   );
 }

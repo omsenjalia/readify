@@ -1,54 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AlignLeft, Play, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-
-function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return "–";
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "–";
-  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
-  if (seconds < 60) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.round(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
-  const months = Math.round(days / 30);
-  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
-  const years = Math.round(months / 12);
-  return `${years} year${years === 1 ? "" : "s"} ago`;
-}
-
-function SourceBadge({ type }: { type: string }) {
-  if (type === "pdf") {
-    return (
-      <span className="flex h-8 w-11 shrink-0 items-center justify-center rounded-md bg-red-600 text-[10px] font-bold tracking-wide text-white">
-        PDF
-      </span>
-    );
-  }
-  if (type === "docx") {
-    return (
-      <span className="flex h-8 w-12 shrink-0 items-center justify-center rounded-md bg-blue-600 text-[10px] font-bold tracking-wide text-white">
-        DOCX
-      </span>
-    );
-  }
-  if (type === "youtube") {
-    return (
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-600 text-white">
-        <Play className="h-4 w-4 fill-current" />
-      </span>
-    );
-  }
-  return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500">
-      <AlignLeft className="h-4 w-4" />
-    </span>
-  );
-}
+import SourceBadge from "@/components/SourceBadge";
+import { timeAgo } from "@/lib/format";
 
 export default async function StatsPage() {
   const supabase = await createClient();
@@ -175,7 +130,7 @@ export default async function StatsPage() {
                     key={entry.id}
                     className="flex items-center gap-4 px-5 py-4"
                   >
-                    <SourceBadge type={entry.doc.source_type} />
+                    <SourceBadge type={entry.doc.source_type} size="lg" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-gray-900">
                         {entry.doc.title}
