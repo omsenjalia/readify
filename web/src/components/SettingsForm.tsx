@@ -7,14 +7,26 @@ import clsx from "clsx";
 import { KeyRound, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReadingPreferences } from "@/types";
+import {
+  FONT_MAX,
+  FONT_MIN,
+  FONT_STEP,
+  THEMES,
+  WPM_MAX,
+  WPM_MIN,
+  WPM_STEP,
+  type Theme,
+} from "@/lib/constants";
+import { updatePreferences } from "@/lib/preferences-api";
 
-type Theme = "light" | "dark" | "sepia";
+const THEME_LABELS: Record<Theme, string> = {
+  light: "Light",
+  dark: "Dark",
+  sepia: "Sepia",
+};
 
-const THEMES: { id: Theme; label: string }[] = [
-  { id: "light", label: "Light" },
-  { id: "dark", label: "Dark" },
-  { id: "sepia", label: "Sepia" },
-];
+/** Single source of truth: the theme list comes from shared constants. */
+const THEME_OPTIONS = THEMES.map((id) => ({ id, label: THEME_LABELS[id] }));
 
 function SettingToggle({
   label,
@@ -94,15 +106,11 @@ export default function SettingsForm({
   function queueSave(patch: Partial<ReadingPreferences>) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      const res = await fetch("/api/preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      if (res.ok) {
+      const result = await updatePreferences(patch);
+      if (result.ok) {
         toast.success("Settings saved");
       } else {
-        toast.error("Couldn't save changes");
+        toast.error(result.error ?? "Couldn't save changes");
       }
     }, 500);
   }
@@ -167,9 +175,9 @@ export default function SettingsForm({
             </div>
             <input
               type="range"
-              min={100}
-              max={800}
-              step={25}
+              min={WPM_MIN}
+              max={WPM_MAX}
+              step={WPM_STEP}
               value={wpm}
               onChange={(e) => {
                 const next = Number(e.target.value);
@@ -180,8 +188,8 @@ export default function SettingsForm({
               aria-label="Words per minute"
             />
             <div className="mt-1 flex justify-between text-[10px] text-gray-400">
-              <span>100</span>
-              <span>800</span>
+              <span>{WPM_MIN}</span>
+              <span>{WPM_MAX}</span>
             </div>
           </div>
 
@@ -201,9 +209,9 @@ export default function SettingsForm({
             </div>
             <input
               type="range"
-              min={28}
-              max={68}
-              step={4}
+              min={FONT_MIN}
+              max={FONT_MAX}
+              step={FONT_STEP}
               value={fontSize}
               onChange={(e) => {
                 const next = Number(e.target.value);
@@ -214,8 +222,8 @@ export default function SettingsForm({
               aria-label="Font size"
             />
             <div className="mt-1 flex justify-between text-[10px] text-gray-400">
-              <span>28</span>
-              <span>68</span>
+              <span>{FONT_MIN}</span>
+              <span>{FONT_MAX}</span>
             </div>
           </div>
 
@@ -223,7 +231,7 @@ export default function SettingsForm({
           <div>
             <div className="mb-2 text-sm font-medium text-gray-700">Theme</div>
             <div className="grid grid-cols-3 gap-2">
-              {THEMES.map((t) => (
+              {THEME_OPTIONS.map((t) => (
                 <button
                   key={t.id}
                   type="button"

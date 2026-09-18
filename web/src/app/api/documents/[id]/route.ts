@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const IMAGE_BUCKET = "document-images";
-const SOURCE_BUCKET = "documents";
+import { IMAGE_BUCKET, SOURCE_BUCKET } from "@/lib/constants";
 
 export async function PATCH(
   request: NextRequest,

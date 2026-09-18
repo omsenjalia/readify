@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import pymupdf
 
@@ -13,7 +15,7 @@ logger = logging.getLogger(__name__)
 IMAGE_BUCKET = "document-images"
 
 
-def _upload_png(supabase, document_id: str, key: str, data: bytes) -> str:
+def _upload_png(supabase: Any, document_id: str, key: str, data: bytes) -> str:
     """Upload a PNG to the private document-images bucket.
 
     Returns the *storage path* (``{document_id}/{key}.png``), not a public
@@ -29,10 +31,13 @@ def _upload_png(supabase, document_id: str, key: str, data: bytes) -> str:
     return path
 
 
+ProgressCallback = Callable[[str], Awaitable[None]]
+
+
 async def extract_pdf_blocks(
     file_bytes: bytes,
     document_id: str,
-    progress_cb=None,
+    progress_cb: ProgressCallback | None = None,
 ) -> list[dict]:
     """Extract text and image blocks from a PDF byte stream.
 
@@ -164,42 +169,59 @@ async def extract_pdf_blocks(
                     exc,
                 )
 
+        # Time each page around the call itself. Previously the elapsed value
+        # was read inside `_ocr_result_block`, which runs *after* `gather`
+        # resolves — so every logged duration was ~0.00s.
         results = await asyncio.gather(
             *(
-                ocr_page_image(img, filename=f"page_{page_num}.png")
+                _timed_ocr(page_num, img)
                 for page_num, _, img in ocr_tasks
             ),
             return_exceptions=True,
         )
-        for (page_num, text_block_idx, _), result in zip(
+        for (page_num, text_block_idx, _), outcome in zip(
             ocr_tasks, results, strict=True
         ):
-            blocks[text_block_idx] = _ocr_result_block(page_num, result)
+            if isinstance(outcome, BaseException):
+                # The wrapper itself failed; treat it as an unreadable page.
+                blocks[text_block_idx] = _unreadable_block()
+                logger.warning("OCR task crashed for page %d: %r", page_num, outcome)
+                continue
+            elapsed, result = outcome
+            blocks[text_block_idx] = _ocr_result_block(page_num, elapsed, result)
     return blocks
 
 
-def _ocr_result_block(page_num: int, result: object) -> dict:
+async def _timed_ocr(page_num: int, image_bytes: bytes) -> tuple[float, object]:
+    """Run one page through OCR and report how long it took.
+
+    Exceptions are returned rather than raised so the timing survives a
+    failure; they are already caught by ``asyncio.gather`` either way.
+    """
+    started = time.perf_counter()
+    try:
+        text = await ocr_page_image(image_bytes, filename=f"page_{page_num}.png")
+    except Exception as exc:  # noqa: BLE001 - reported to the caller
+        return time.perf_counter() - started, exc
+    return time.perf_counter() - started, text
+
+
+def _unreadable_block() -> dict:
+    """Placeholder shown to the reader when a page cannot be extracted."""
+    return {"type": "text", "words": ["[Page could not be read]"]}
+
+
+def _ocr_result_block(page_num: int, elapsed: float, result: object) -> dict:
     """Turn a single page's OCR outcome into a text block."""
-    start = time.perf_counter()
     if isinstance(result, BaseException):
-        logger.warning(
-            "OCR failed for page %d after %.2fs: %r",
-            page_num,
-            time.perf_counter() - start,
-            result,
-        )
-        return {"type": "text", "words": ["[Page could not be read]"]}
+        logger.warning("OCR failed for page %d after %.2fs: %r", page_num, elapsed, result)
+        return _unreadable_block()
 
     text = result.strip()
     if not text:
         logger.warning("OCR returned empty text for page %d", page_num)
-        return {"type": "text", "words": ["[Page could not be read]"]}
+        return _unreadable_block()
 
     words = tokenize_words(text)
-    logger.info(
-        "OCR page %d: %d words in %.2fs",
-        page_num,
-        len(words),
-        time.perf_counter() - start,
-    )
+    logger.info("OCR page %d: %d words in %.2fs", page_num, len(words), elapsed)
     return {"type": "text", "words": words}

@@ -20,7 +20,9 @@ RSVP speed reader with ORP (Optimal Recognition Point) character highlighting. U
 ```
 readify/
 ├── web/             Next.js app (App Router, src/ dir)
+│   └── src/lib/     Pure logic (tokenizer, ORP, math, reader engine) + unit tests
 ├── backend/         FastAPI document-processing microservice
+│   └── tests/       Unit tests for extraction, persistence and auth
 ├── dev.sh           Runs both apps for local development
 └── .github/         CI workflows
 ```
@@ -140,7 +142,7 @@ Digital (text-layer) PDFs still use PyMuPDF only — no OCR call.
 1. Connect your repo to [vercel.com](https://vercel.com).
 2. Set the **root directory** to `web`.
 3. Framework Preset: **Next.js**.
-4. Add all five `web/.env.local` variables as Vercel environment variables (mark the two `NEXT_PUBLIC_*` as client-accessible).
+4. Add all four `web/.env.local` variables as Vercel environment variables (mark the two `NEXT_PUBLIC_*` as client-accessible).
 5. Deploy — Vercel builds automatically on push.
 
 ## Deploy to Railway (backend)
@@ -155,22 +157,38 @@ Digital (text-layer) PDFs still use PyMuPDF only — no OCR call.
    - `OCR_SERVER_URL` + `OCR_SERVER_SECRET` — optional
 5. Copy the generated Railway service URL and set it as `PROCESSOR_URL` in your Vercel environment variables (e.g. `https://your-service.up.railway.app`).
 
-## Linting
+## Linting & testing
 
 ```bash
-# Backend
-cd backend && ruff check .
-
 # Frontend
-cd web && npm run lint && npm run build
+cd web
+npm run lint        # eslint
+npm run typecheck   # next typegen + tsc --noEmit
+npm test            # vitest (unit tests for the pure logic in src/lib)
+npm run build
+
+# Backend
+cd backend
+pip install -r requirements-dev.txt   # includes pytest
+ruff check .
+python -m pytest
 ```
+
+The unit suites cover the code that is easiest to break and hardest to spot:
+tokenization, ORP splitting, Markdown stripping, math detection, the RSVP
+playback state machine (`src/lib/reader-engine.ts`), preference validation,
+block→row mapping, and the processor's shared-secret check. They need no
+Supabase credentials and no network access.
 
 ## CI
 
 GitHub Actions runs on every push to `main` and on pull requests:
 
-- **build-web** — `cd web && npm ci && npm run build`
-- **lint-backend** — `cd backend && pip install -r requirements.txt && ruff check .`
+- **build-web** — `npm ci` → `npm run lint` → `npm test` → `npm run build`
+- **backend** — `pip install -r requirements-dev.txt` → `ruff check .` → `python -m pytest`
+
+Web lint was previously absent from CI, which is how a `react-hooks` error
+survived on `main`; it now runs before the build so failures surface fast.
 
 ## License
 

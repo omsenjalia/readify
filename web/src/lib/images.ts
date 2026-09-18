@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const IMAGE_BUCKET = "document-images";
+import { IMAGE_BUCKET } from "@/lib/constants";
 
 /** Signed URL lifetime: long enough for a reading session + public share. */
 const SIGN_SECONDS = 60 * 60 * 6; // 6 hours

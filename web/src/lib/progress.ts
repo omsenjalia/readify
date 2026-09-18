@@ -1,24 +1,39 @@
 import { createClient } from "@/lib/supabase/client";
 
+/* ------------------------------------------------------------------ */
+/* Pure helpers                                                        */
+/* ------------------------------------------------------------------ */
+
 export function pctComplete(currentWord: number, totalWords: number): number {
   if (totalWords <= 0) return 0;
   return Math.min(100, Math.round((currentWord / totalWords) * 100));
 }
 
-export function wordsPerMinute(msSpent: number, wordsRead: number): number {
-  if (msSpent <= 0) return 0;
-  return Math.round((wordsRead / (msSpent / 60000)) * 10) / 10;
-}
-
-export function estimatedSeconds(totalWords: number, wpm: number): number {
-  if (wpm <= 0 || totalWords <= 0) return 0;
-  return Math.round((totalWords / wpm) * 60);
-}
+/* ------------------------------------------------------------------ */
+/* Local (signed-out) progress                                         */
+/* ------------------------------------------------------------------ */
 
 const LOCAL_PROGRESS_PREFIX = "readify:progress:";
 
-export function localProgressKey(slug: string): string {
+function localProgressKey(slug: string): string {
   return `${LOCAL_PROGRESS_PREFIX}${slug}`;
+}
+
+/**
+ * Notify `useSyncExternalStore` consumers when local progress changes.
+ *
+ * `storage` fires for other tabs; the custom event covers this one, since a
+ * same-tab `localStorage.setItem` emits nothing.
+ */
+export const LOCAL_PROGRESS_EVENT = "readify:local-progress";
+
+export function subscribeToLocalProgress(onChange: () => void): () => void {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(LOCAL_PROGRESS_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(LOCAL_PROGRESS_EVENT, onChange);
+  };
 }
 
 export function getLocalProgress(
@@ -44,40 +59,30 @@ export function setLocalProgress(
 ): void {
   try {
     localStorage.setItem(localProgressKey(slug), JSON.stringify({ index, wpm }));
+    window.dispatchEvent(new Event(LOCAL_PROGRESS_EVENT));
   } catch {
     // localStorage may be unavailable (private mode, storage disabled).
   }
 }
 
-let clientRef: ReturnType<typeof createClient> | null = null;
+/* ------------------------------------------------------------------ */
+/* Remote (signed-in) progress                                         */
+/* ------------------------------------------------------------------ */
 
-function getClient() {
-  if (!clientRef) clientRef = createClient();
-  return clientRef;
-}
-
-export async function getRemoteProgress(
-  documentId: string,
-  userId: string,
-): Promise<{ word_index: number; wpm: number } | null> {
-  const { data, error } = await getClient()
-    .from("reading_sessions")
-    .select("word_index, wpm")
-    .eq("user_id", userId)
-    .eq("document_id", documentId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return { word_index: data.word_index, wpm: data.wpm };
-}
-
+// `createBrowserClient` from @supabase/ssr already memoises a singleton in the
+// browser, so no local cache is needed here (there used to be one per module).
+//
+// Reading progress back happens in the server components that need it
+// (`library`, `stats`, `c/[slug]`) rather than in the browser.
 export async function setRemoteProgress(
   documentId: string,
   userId: string,
   wordIndex: number,
   wpm: number,
 ): Promise<void> {
-  const client = getClient();
+  const client = createClient();
+  const now = new Date().toISOString();
+
   await Promise.all([
     client.from("reading_sessions").upsert(
       {
@@ -85,13 +90,10 @@ export async function setRemoteProgress(
         document_id: documentId,
         word_index: wordIndex,
         wpm,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       },
       { onConflict: "user_id,document_id" },
     ),
-    client
-      .from("documents")
-      .update({ last_read_at: new Date().toISOString() })
-      .eq("id", documentId),
+    client.from("documents").update({ last_read_at: now }).eq("id", documentId),
   ]);
 }
