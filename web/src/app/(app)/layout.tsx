@@ -19,8 +19,11 @@ export default async function AppLayout(props: LayoutProps<"/">) {
     .select("theme")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  // Dark is the baseline (no class); light/sepia opt in via a class applied
+  // before first paint so there is no theme flash.
   const theme =
-    prefs?.theme === "dark" || prefs?.theme === "sepia" ? prefs.theme : null;
+    prefs?.theme === "light" || prefs?.theme === "sepia" ? prefs.theme : null;
 
   return (
     <>

@@ -117,30 +117,38 @@ export default function DragDrop({
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={clsx(
-          "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors",
+          "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-colors sm:p-10",
           dragging
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-[var(--line-strong)] hover:border-indigo-400 hover:bg-[var(--surface-soft)]",
-          "cursor-pointer",
+            ? "border-accent bg-accent-soft"
+            : "border-line-strong hover:border-accent/60 hover:bg-surface-soft/60",
         )}
       >
-        <Upload
+        <span
           className={clsx(
-            "mb-3 h-10 w-10",
-            dragging ? "text-indigo-500" : "text-gray-400",
+            "mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl transition",
+            dragging ? "bg-accent text-on-accent" : "bg-accent-soft text-accent",
           )}
-        />
-        <p className="text-sm font-medium text-[var(--foreground)]">
+        >
+          <Upload className="h-5 w-5" strokeWidth={1.75} />
+        </span>
+        <p className="text-sm font-bold text-ink">
           Drop your files here or click to browse
         </p>
-        <p className="mt-1 text-xs text-[var(--muted)]">
-          Supported: {SUPPORTED_EXTENSIONS.join(", ")} — Max{" "}
-          {formatBytes(MAX_FILE_SIZE)} each — Up to {maxFiles} files
+        <p className="mt-1.5 text-xs text-muted">
+          Supported: {SUPPORTED_EXTENSIONS.join(", ").toUpperCase()} · Max{" "}
+          {formatBytes(MAX_FILE_SIZE)} each · Up to {maxFiles} files
         </p>
       </div>
 
       {validateError && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p
+          className="mt-3 rounded-xl px-3.5 py-2.5 text-sm font-medium"
+          style={{
+            background: "var(--color-danger-soft)",
+            color: "var(--color-danger)",
+          }}
+          role="alert"
+        >
           {validateError}
         </p>
       )}
@@ -162,13 +170,15 @@ export default function DragDrop({
           {selected.map((file, i) => (
             <li
               key={`${file.name}-${i}`}
-              className="flex items-center justify-between rounded-lg bg-[var(--surface-soft)] px-3 py-2"
+              className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-soft/60 px-3.5 py-2.5"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                <p className="truncate text-sm font-semibold text-ink">
                   {file.name}
                 </p>
-                <p className="text-xs text-[var(--muted)]">{formatBytes(file.size)}</p>
+                <p className="text-xs text-muted tabular-nums">
+                  {formatBytes(file.size)}
+                </p>
               </div>
               <button
                 type="button"
@@ -176,7 +186,7 @@ export default function DragDrop({
                   e.stopPropagation();
                   remove(i);
                 }}
-                className="ml-2 shrink-0 rounded p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-subtle transition hover:bg-danger-soft hover:text-danger"
                 aria-label={`Remove ${file.name}`}
               >
                 <X className="h-4 w-4" />

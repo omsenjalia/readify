@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { LoaderCircle } from "lucide-react";
+import Brand from "@/components/Brand";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,70 +36,101 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-          Welcome back
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">Sign in to your Readify account.</p>
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-bg px-4 py-12">
+      <div className="grid-backdrop pointer-events-none absolute inset-0" aria-hidden="true" />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+        style={{ background: "var(--glow-radial)" }}
+        aria-hidden="true"
+      />
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="you@example.com"
-            />
-          </div>
+      <div className="relative w-full max-w-md">
+        <Link href="/" className="mb-8 flex justify-center" aria-label="Back to home">
+          <Brand size="lg" />
+        </Link>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="••••••••"
-            />
-          </div>
+        <div className="card p-7 sm:p-8">
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+            Welcome back
+          </h1>
+          <p className="mt-1.5 text-sm text-muted">
+            Your library is right where you left it.
+          </p>
 
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-              {error}
-            </p>
-          )}
+          <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input"
+                placeholder="you@example.com"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60"
-          >
-            {loading && <LoaderCircle className="h-4 w-4 animate-spin" />}
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                placeholder="••••••••"
+              />
+            </div>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-500">
-            Sign up
-          </Link>
-        </p>
+            {error && (
+              <p
+                className="rounded-xl px-3.5 py-2.5 text-sm font-medium"
+                style={{
+                  background: "var(--color-danger-soft)",
+                  color: "var(--color-danger)",
+                }}
+                role="alert"
+              >
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary btn-lg mt-2 w-full disabled:opacity-60"
+            >
+              {loading && <LoaderCircle className="h-4 w-4 animate-spin" />}
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-muted">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/signup"
+              className="font-semibold text-accent transition hover:underline"
+            >
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

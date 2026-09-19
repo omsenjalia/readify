@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { BookOpen, Minimize, X } from "lucide-react";
+import { BookOpen, Minimize } from "lucide-react";
 
 import {
   getLocalProgress,
@@ -24,10 +24,12 @@ import {
   updateDocument,
 } from "@/lib/documents-api";
 import type { ReadItem } from "@/lib/flatten";
-import type { ReaderPrefs } from "@/lib/constants";
-import { WPM_MAX, WPM_MIN, WPM_STEP } from "@/lib/constants";
+import type { ReaderPrefs, ReadingMode } from "@/lib/constants";
+import { PREFERENCE_DEFAULTS, WPM_MAX, WPM_MIN, WPM_STEP } from "@/lib/constants";
+import { intervalMsForWpm } from "@/lib/reader-engine";
 import { useReaderEngine } from "@/hooks/useReaderEngine";
 import { useReaderSettings } from "@/hooks/useReaderSettings";
+import { useReadingMode } from "@/hooks/useReadingMode";
 
 import ShareModal, { type ReaderShareDoc } from "@/components/ShareModal";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
@@ -36,6 +38,7 @@ import ReaderProgressBar from "@/components/reader/ReaderProgressBar";
 import ReaderControls, {
   type ReaderPanel,
 } from "@/components/reader/ReaderControls";
+import LineStage from "@/components/reader/LineStage";
 import WordStage from "@/components/reader/WordStage";
 import ImageStage from "@/components/reader/ImageStage";
 import DwellOverlay from "@/components/reader/DwellOverlay";
@@ -64,19 +67,110 @@ function clampWpm(value: number): number {
   return Math.min(WPM_MAX, Math.max(WPM_MIN, value));
 }
 
+/* ------------------------------------------------------------------ */
+/* Touch gestures                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Horizontal travel past which a touch becomes a swipe, in px. */
+const SWIPE_THRESHOLD = 44;
+/** Travel/duration under which a touch counts as a tap. */
+const TAP_MAX_MOVE = 12;
+const TAP_MAX_MS = 400;
+
+interface GestureHandlers {
+  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: (e: React.PointerEvent) => void;
+  onPointerCancel: (e: React.PointerEvent) => void;
+}
+
+function haptic(ms = 8): void {
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    // Not supported / not allowed — purely cosmetic.
+  }
+}
+
+/**
+ * Mobile-first stage gestures:
+ *
+ *  - swipe left  → next word
+ *  - swipe right → previous word
+ *  - tap the left third → previous word
+ *  - tap the right third → next word
+ *  - tap the middle → play/pause
+ *
+ * Desktop keeps the keyboard shortcuts; both paths funnel into the same
+ * engine actions.
+ */
+function useStageGestures(
+  ref: React.RefObject<HTMLElement | null>,
+  {
+    onStep,
+    onTogglePlay,
+  }: { onStep: (delta: number) => void; onTogglePlay: () => void },
+): GestureHandlers {
+  const start = useRef<{ x: number; y: number; t: number; swiped: boolean }>({
+    x: 0,
+    y: 0,
+    t: 0,
+    swiped: false,
+  });
+
+  return useMemo(
+    () => ({
+      onPointerDown: (e: React.PointerEvent) => {
+        start.current = { x: e.clientX, y: e.clientY, t: Date.now(), swiped: false };
+      },
+      onPointerMove: (e: React.PointerEvent) => {
+        const s = start.current;
+        if (s.swiped) return;
+        const dx = e.clientX - s.x;
+        const dy = e.clientY - s.y;
+        if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          s.swiped = true;
+          haptic();
+          onStep(dx < 0 ? 1 : -1);
+        }
+      },
+      onPointerUp: (e: React.PointerEvent) => {
+        const s = start.current;
+        if (s.swiped) return;
+        const dt = Date.now() - s.t;
+        const dist = Math.hypot(e.clientX - s.x, e.clientY - s.y);
+        if (dt > TAP_MAX_MS || dist > TAP_MAX_MOVE) return;
+
+        const rect = ref.current?.getBoundingClientRect();
+        if (!rect || rect.width === 0) return;
+        const ratio = (e.clientX - rect.left) / rect.width;
+
+        haptic();
+        if (ratio < 0.3) onStep(-1);
+        else if (ratio > 0.7) onStep(1);
+        else onTogglePlay();
+      },
+      onPointerCancel: () => {
+        start.current.swiped = true;
+      },
+    }),
+    [ref, onStep, onTogglePlay],
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Reader                                                              */
+/* ------------------------------------------------------------------ */
+
 /**
  * RSVP reader.
  *
- * Previously a single 1,400-line component that owned the playback state
- * machine, progress persistence, preference persistence, four popovers and
- * every piece of markup. The pieces now live in:
- *
- *  - `lib/reader-engine.ts`      pure playback transitions (unit tested)
- *  - `hooks/useReaderEngine`     timers + progress saves
- *  - `hooks/useReaderSettings`   speed / font / theme / toggles + persistence
- *  - `components/reader/*`       presentation
- *
- * What remains here is composition plus the document-level actions.
+ * The playback state machine lives in `lib/reader-engine.ts` (pure, unit
+ * tested); timers and persistence in `hooks/useReaderEngine`; presentation
+ * settings in `hooks/useReaderSettings`; the two display modes in
+ * `components/reader/LineStage` (whole-line sliding focus) and
+ * `components/reader/WordStage` (classic single word). What remains here is
+ * composition, gestures, and the document-level actions.
  */
 export default function ReaderClient({
   document: doc,
@@ -86,11 +180,12 @@ export default function ReaderClient({
   userId,
   preferences,
   initialIndex = 0,
-  initialWpm = 800,
+  initialWpm = PREFERENCE_DEFAULTS.default_wpm,
 }: ReaderProps) {
   const router = useRouter();
 
   const settings = useReaderSettings({ preferences, initialWpm, userId });
+  const [mode, setMode] = useReadingMode();
 
   /* ---------------- document-level state ---------------- */
 
@@ -118,9 +213,7 @@ export default function ReaderClient({
 
   /**
    * Signed-in progress is loaded server-side and arrives as `initialIndex`, so
-   * only anonymous readers need the localStorage fallback. The reader used to
-   * re-fetch both progress and preferences from Supabase on mount even though
-   * the page had already provided them.
+   * only anonymous readers need the localStorage fallback.
    */
   const saveProgress = useCallback(
     (index: number, wpm: number) => {
@@ -187,9 +280,7 @@ export default function ReaderClient({
 
   /**
    * Word counts come from a prefix sum computed once per document, because the
-   * reader re-renders on every tick (up to ~13 times a second at 800 WPM). The
-   * old code ran `items.filter(...)` plus `items.slice(0, index + 1).filter(...)`
-   * on *every* render, allocating an array as long as the current position.
+   * reader re-renders on every tick (up to ~13 times a second at 800 WPM).
    */
   const wordCounts = useMemo(() => {
     const prefix = new Uint32Array(items.length + 1);
@@ -247,6 +338,13 @@ export default function ReaderClient({
 
   const { togglePlay, step, resume } = engine;
 
+  // The key handler reads the mode through a ref so switching modes does not
+  // re-subscribe the global listener.
+  const modeRef = useRef<ReadingMode>(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
   // Current speed, read by the key handler so ArrowUp/Down can report the
   // clamped value without re-subscribing on every speed change.
   const wpmRef = useRef(settings.wpm);
@@ -297,6 +395,10 @@ export default function ReaderClient({
         case "F":
           toggleFullscreen();
           break;
+        case "m":
+        case "M":
+          setMode(modeRef.current === "line" ? "word" : "line");
+          break;
         default:
           break;
       }
@@ -304,7 +406,15 @@ export default function ReaderClient({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [togglePlay, step, setWpm, toggleFullscreen]);
+  }, [togglePlay, step, setWpm, toggleFullscreen, setMode]);
+
+  /* ---------------- touch gestures ---------------- */
+
+  const stageRef = useRef<HTMLElement | null>(null);
+  const gestures = useStageGestures(stageRef, {
+    onStep: step,
+    onTogglePlay: togglePlay,
+  });
 
   /* ---------------- document actions ---------------- */
 
@@ -372,6 +482,16 @@ export default function ReaderClient({
     toast("Started from the beginning");
   }
 
+  const handleModeChange = useCallback(
+    (next: ReadingMode) => {
+      setMode(next);
+      toast.success(next === "line" ? "Line Flow" : "One word at a time", {
+        id: "reader-mode",
+      });
+    },
+    [setMode],
+  );
+
   /* ---------------- render ---------------- */
 
   const header = (
@@ -416,15 +536,12 @@ export default function ReaderClient({
 
   if (items.length === 0) {
     return (
-      <div
-        className="flex min-h-screen flex-col"
-        style={{ background: "var(--background)", color: "var(--foreground)" }}
-      >
+      <div className="flex min-h-dvh flex-col bg-bg text-ink">
         {header}
         <main className="flex flex-1 items-center justify-center px-6 text-center">
           <div>
-            <BookOpen className="mx-auto h-10 w-10 text-gray-400" />
-            <p className="mt-3 text-sm text-gray-500">
+            <BookOpen className="mx-auto h-10 w-10 text-subtle" />
+            <p className="mt-3 text-sm text-muted">
               This document has no readable content yet.
             </p>
           </div>
@@ -434,11 +551,11 @@ export default function ReaderClient({
     );
   }
 
+  const isImageItem = currentItem?.kind === "image";
+  const stepMs = intervalMsForWpm(settings.wpm);
+
   return (
-    <div
-      className="flex min-h-screen flex-col"
-      style={{ background: "var(--background)", color: "var(--foreground)" }}
-    >
+    <div className="glow-radial relative flex h-dvh min-h-dvh flex-col overflow-hidden bg-bg text-ink">
       {!isFullscreen && header}
 
       {settings.showProgressBar && (
@@ -451,9 +568,14 @@ export default function ReaderClient({
         />
       )}
 
-      <main className="flex flex-1 flex-col items-center justify-center px-4">
-        {currentItem?.kind === "image" ? (
-          <ImageStage url={currentItem.url}>
+      {/* Stage — tap and swipe zones cover the whole reading area. */}
+      <main
+        ref={stageRef}
+        {...gestures}
+        className="flex flex-1 touch-pan-y flex-col items-center justify-center overflow-hidden px-3 sm:px-4"
+      >
+        {isImageItem ? (
+          <ImageStage url={(currentItem as { kind: "image"; url: string }).url}>
             {engine.dwell === "image" && settings.autoPauseImages && (
               <DwellOverlay
                 state={engine.state}
@@ -462,8 +584,25 @@ export default function ReaderClient({
               />
             )}
           </ImageStage>
+        ) : mode === "line" ? (
+          <div className="flex w-full max-w-4xl flex-col items-center">
+            <LineStage
+              items={items}
+              index={engine.index}
+              fontSize={settings.fontSize}
+              highlightOrp={settings.highlightOrp}
+              stepMs={stepMs}
+            />
+            {engine.dwell === "math" && (
+              <DwellOverlay
+                state={engine.state}
+                label="Formula pause"
+                onContinue={resume}
+              />
+            )}
+          </div>
         ) : (
-          <>
+          <div className="flex w-full flex-col items-center">
             <WordStage
               current={currentItem}
               previous={prevItem}
@@ -478,14 +617,20 @@ export default function ReaderClient({
                 onContinue={resume}
               />
             )}
-          </>
+          </div>
         )}
       </main>
 
-      <div className="flex flex-col items-center gap-3 pb-6 pt-2">
+      {/* Controls dock */}
+      <div
+        className="flex flex-col items-center gap-2 border-t border-line bg-bg/80 px-3 pb-4 pt-3 backdrop-blur-md sm:pb-5"
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 1rem))" }}
+      >
         <ReaderControls
           settings={settings}
           playing={engine.playing}
+          mode={mode}
+          onModeChange={handleModeChange}
           openPanel={openPanel}
           setOpenPanel={setOpenPanel}
           onStep={step}
@@ -493,9 +638,9 @@ export default function ReaderClient({
         />
 
         {!isFullscreen && (
-          <p className="hidden text-xs text-gray-400 md:block">
-            ← → or Space to play/pause · ↑ ↓ to adjust speed · F to toggle
-            fullscreen
+          <p className="hidden text-[11px] font-medium text-subtle md:block">
+            Space play/pause · ← → step · ↑ ↓ speed · M mode · F fullscreen
+            {mode === "line" && " · on touch: swipe or tap the edges"}
           </p>
         )}
       </div>
@@ -505,7 +650,7 @@ export default function ReaderClient({
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="flex items-center gap-2 rounded-full border border-gray-300 bg-white/90 px-4 py-2 text-xs font-medium text-gray-700 shadow-lg backdrop-blur transition hover:bg-white"
+            className="btn btn-outline !border-line bg-bg-elevated/90 !px-4 !py-2 text-xs backdrop-blur"
           >
             <Minimize className="h-3.5 w-3.5" />
             Esc to exit
@@ -517,7 +662,7 @@ export default function ReaderClient({
       {openPanel === "settings" && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
             onClick={() => setOpenPanel(null)}
             aria-hidden="true"
           />
@@ -525,19 +670,24 @@ export default function ReaderClient({
             role="dialog"
             aria-modal="true"
             aria-label="Reading settings"
-            className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-5 pb-8 shadow-2xl"
+            className="sheet-in absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-line bg-bg-elevated p-5 shadow-2xl"
+            style={{ paddingBottom: "max(1.75rem, env(safe-area-inset-bottom, 1.75rem))" }}
           >
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-base font-semibold text-gray-900">
+            <div
+              className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong"
+              aria-hidden="true"
+            />
+            <div className="mb-5 flex items-center justify-between">
+              <span className="text-base font-bold text-ink">
                 Reading settings
               </span>
               <button
                 type="button"
                 onClick={() => setOpenPanel(null)}
                 aria-label="Close settings"
-                className="flex h-12 w-12 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-sm font-bold text-muted transition active:scale-95"
               >
-                <X className="h-5 w-5" />
+                ✕
               </button>
             </div>
             <div className="space-y-5">
@@ -560,12 +710,12 @@ export default function ReaderClient({
 
       {resumeAt !== null && (
         <div className="fixed inset-x-0 bottom-6 z-[60] flex justify-center px-4">
-          <div className="flex w-full max-w-sm items-center gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-2xl">
+          <div className="flex w-full max-w-sm items-center gap-3 rounded-2xl border border-line bg-bg-elevated p-4 shadow-2xl">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-sm font-bold text-ink">
                 Resume from word {resumeAt.toLocaleString()}?
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="mt-0.5 text-xs text-muted">
                 Pick up where you left off, or start from the top.
               </p>
             </div>
@@ -573,14 +723,14 @@ export default function ReaderClient({
               <button
                 type="button"
                 onClick={dismissResume}
-                className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-black/5"
+                className="btn btn-ghost btn-sm text-xs"
               >
                 Start over
               </button>
               <button
                 type="button"
                 onClick={acceptResume}
-                className="rounded-lg bg-[#4F6EF6] px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
+                className="btn btn-primary btn-sm text-xs"
               >
                 Resume
               </button>

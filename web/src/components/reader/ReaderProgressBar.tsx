@@ -1,6 +1,6 @@
 "use client";
 
-/** Thin progress rail plus the "x% complete · n words left" caption. */
+/** Thin green progress rail plus the "x% complete · n words left" caption. */
 export default function ReaderProgressBar({
   percent,
   wordsLeft,
@@ -16,20 +16,25 @@ export default function ReaderProgressBar({
   total: number;
 }) {
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 pb-1 pt-3">
-      <div className="h-[3px] w-full overflow-hidden rounded-full bg-gray-200/70">
+    <div className="mx-auto w-full max-w-3xl px-5 pb-1 pt-3 sm:px-6">
+      <div className="h-1 w-full overflow-hidden rounded-full bg-surface-soft">
         <div
-          className="h-full rounded-full bg-[#4F6EF6] transition-all duration-200"
-          style={{ width: `${percent}%` }}
+          className="h-full rounded-full transition-all duration-200"
+          style={{
+            width: `${percent}%`,
+            background:
+              "linear-gradient(90deg, var(--color-accent-strong), var(--color-accent))",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--color-accent) 50%, transparent)",
+          }}
           role="progressbar"
           aria-valuenow={percent}
           aria-valuemin={0}
           aria-valuemax={100}
         />
       </div>
-      <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+      <div className="mt-1.5 flex items-center justify-between text-[11px] font-medium text-muted tabular-nums sm:text-xs">
         <span>
-          {percent}% complete · {index + 1}/{total}
+          {percent}% · {index + 1}/{total.toLocaleString()}
         </span>
         <span>
           {wordsLeft.toLocaleString()} words · {minutesLeft} min left

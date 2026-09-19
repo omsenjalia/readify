@@ -22,9 +22,11 @@ export default function SliderRow({
 }) {
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-500">{label}</span>
-        <span className="text-sm font-semibold text-gray-900">{valueLabel}</span>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-muted">{label}</span>
+        <span className="text-sm font-bold text-ink tabular-nums">
+          {valueLabel}
+        </span>
       </div>
       <input
         type="range"
@@ -33,10 +35,10 @@ export default function SliderRow({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#4F6EF6]"
+        className="range-accent"
         aria-label={label}
       />
-      <div className="mt-1 flex justify-between text-[10px] text-gray-400">
+      <div className="mt-1.5 flex justify-between text-[10px] font-medium text-subtle tabular-nums">
         <span>{min}</span>
         <span>{max}</span>
       </div>

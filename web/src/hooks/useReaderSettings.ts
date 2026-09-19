@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  DEFAULT_THEME,
   FONT_DEFAULT_DESKTOP,
   FONT_DEFAULT_MOBILE,
   FONT_MAX,
   FONT_MIN,
   SMALL_VIEWPORT_QUERY,
+  THEMES,
   WPM_MAX,
   WPM_MIN,
   type ReaderPrefs,
@@ -23,7 +25,17 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function asTheme(value: string | null | undefined): Theme {
-  return value === "dark" || value === "sepia" ? value : "light";
+  return THEMES.includes(value as Theme) ? (value as Theme) : DEFAULT_THEME;
+}
+
+/**
+ * Dark is the baseline (no class on <html>); light/sepia are opt-in classes.
+ * Shared with the settings page so the two can never drift.
+ */
+export function applyThemeClass(theme: Theme): void {
+  const root = document.documentElement;
+  root.classList.remove("dark", "light", "sepia");
+  if (theme !== "dark") root.classList.add(theme);
 }
 
 export interface UseReaderSettingsOptions {
@@ -112,9 +124,7 @@ export function useReaderSettings({
   /* ---------------- theme ---------------- */
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("dark", "sepia");
-    if (theme !== "light") root.classList.add(theme);
+    applyThemeClass(theme);
   }, [theme]);
 
   /* ---------------- persistence ---------------- */

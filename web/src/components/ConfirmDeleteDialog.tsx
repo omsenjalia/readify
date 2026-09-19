@@ -21,7 +21,7 @@ export default function ConfirmDeleteDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         onClick={onCancel}
         aria-hidden="true"
       />
@@ -29,20 +29,20 @@ export default function ConfirmDeleteDialog({
         role="dialog"
         aria-modal="true"
         aria-label="Confirm delete"
-        className="relative w-full max-w-sm rounded-2xl bg-[var(--surface)] p-5 shadow-2xl"
+        className="popover-in relative w-full max-w-sm rounded-3xl border border-line bg-bg-elevated p-6 shadow-2xl"
       >
-        <h3 className="text-base font-semibold text-[var(--ink)]">
+        <h3 className="text-base font-extrabold text-ink">
           Delete document?
         </h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
           {title ? `“${title}” will be` : "This document will be"} permanently
           removed. Shared links will stop working.
         </p>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg px-3.5 py-2 text-sm font-medium text-[var(--muted)] transition hover:bg-[var(--surface-soft)]"
+            className="btn btn-ghost btn-md"
           >
             Cancel
           </button>
@@ -50,7 +50,7 @@ export default function ConfirmDeleteDialog({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+            className="btn btn-md !bg-[var(--color-danger)] !text-white !shadow-none hover:!opacity-90 disabled:opacity-60"
           >
             {deleting ? "Deleting…" : "Delete"}
           </button>

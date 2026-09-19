@@ -17,13 +17,13 @@ export default function ImageStage({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex w-full max-w-3xl flex-col items-center">
-      <div className="card w-full overflow-hidden p-3 sm:p-4">
+    <div className="flex w-full max-w-3xl flex-col items-center px-1">
+      <div className="card w-full overflow-hidden p-2.5 sm:p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}
           alt="Document figure"
-          className="max-h-[min(70vh,28rem)] w-full rounded-xl object-contain"
+          className="max-h-[min(62vh,28rem)] w-full rounded-xl object-contain"
         />
       </div>
       {children}

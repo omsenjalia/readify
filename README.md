@@ -1,6 +1,41 @@
 # Readify
 
-RSVP speed reader with ORP (Optimal Recognition Point) character highlighting. Upload a document, get a shareable link, and read words one at a time with the key recognition character highlighted — built for speed and focus.
+Speed reader with **Line Flow** — the whole line slides beneath a single fixed
+focus point while the ORP (Optimal Recognition Point) character of each word
+lands exactly where your eye is already resting. Your eyes never move; the
+text does. A classic one-word RSVP mode is built in too.
+
+Upload a document, get a shareable link, and read at up to 800 WPM.
+
+## Design
+
+Dark-first, green-toned UI (emerald on near-black) with a full token system
+in `web/src/app/globals.css`:
+
+- `:root` — dark (the baseline; marketing, auth and the default app theme)
+- `.light` / `.sepia` — opt-in reading themes, switchable per user
+- Shared primitives: `.btn-primary|outline|ghost|paper`, `.card`, `.pill`,
+  `.input`, `.range-accent`, focus glows and scroll-reveal animations
+- Mobile-first everywhere: bottom tab nav with a centre upload button,
+  bottom-sheet settings, tap zones + swipe gestures in the reader,
+  `dvh` sizing and safe-area insets
+
+### Reader modes
+
+| Mode | Behaviour |
+| ---- | --------- |
+| **Line Flow** (default) | The current line is laid out from measured text metrics (`lib/lines.ts` + `hooks/useLineLayout.ts`) and slides horizontally so the focused word's ORP character stays pinned to the centre axis. Neighbouring lines are dimmed above/below. `components/reader/LineStage.tsx` |
+| **One word** | Classic RSVP: a single word, ORP-locked to the centre by measurement (`OrpWord.tsx`), with faded previous/next word previews |
+
+The mode is stored per device in localStorage (`lib/reader-mode.ts`) — no
+schema change needed. Press `M` (or use the segmented control) to switch.
+
+Controls: `Space` play/pause · `←/→` step · `↑/↓` speed · `M` mode ·
+`F` fullscreen. On touch: swipe left/right to step, tap the left/right edge
+to step, tap the centre to play/pause.
+
+A public playground lives at **`/demo`** — the real reader running on a
+sample text, no account required.
 
 ## Stack
 
@@ -10,7 +45,7 @@ RSVP speed reader with ORP (Optimal Recognition Point) character highlighting. U
 | UI feedback | react-hot-toast                                            |
 | Auth        | Supabase Auth (`@supabase/ssr`)                            |
 | Database    | Supabase Postgres                                          |
-| Reader      | RSVP engine with ORP highlight (custom React component)    |
+| Reader      | Dual-mode RSVP engine (Line Flow + one-word) with measured ORP alignment |
 | Backend     | Python 3.11+, FastAPI                                      |
 | Extraction  | PyMuPDF (PDF), Mammoth (DOCX), youtube-transcript-api      |
 | OCR         | [Nanonets DocStrange](https://docstrange.nanonets.com/docs/) API (scanned PDFs) |
@@ -19,12 +54,21 @@ RSVP speed reader with ORP (Optimal Recognition Point) character highlighting. U
 
 ```
 readify/
-├── web/             Next.js app (App Router, src/ dir)
-│   └── src/lib/     Pure logic (tokenizer, ORP, math, reader engine) + unit tests
-├── backend/         FastAPI document-processing microservice
-│   └── tests/       Unit tests for extraction, persistence and auth
-├── dev.sh           Runs both apps for local development
-└── .github/         CI workflows
+├── web/                       Next.js app (App Router, src/ dir)
+│   ├── src/lib/               Pure logic (tokenizer, ORP, line layout, math,
+│   │                          reader engine, reader mode) + unit tests
+│   ├── src/hooks/             useReaderEngine / useReaderSettings /
+│   │                          useLineLayout / useReadingMode / useMediaQuery
+│   ├── src/components/
+│   │   ├── landing/           Marketing site (nav, hero, live demo, tabs, …)
+│   │   ├── reader/            LineStage, WordStage, controls, panels
+│   │   └── …                  AppShell, library, upload, shared UI
+│   └── src/app/               Routes incl. public /demo reader playground
+├── backend/                   FastAPI document-processing microservice
+│   └── tests/                 Unit tests for extraction, persistence, auth
+├── supabase/migrations/       Schema + RLS + storage + theme defaults
+├── dev.sh                     Runs both apps for local development
+└── .github/                   CI workflows
 ```
 
 > **Naming:** the service lives in the `backend/` folder. Env vars still say
@@ -101,6 +145,7 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
    - `20260913220010_add_document_images_storage_policies.sql` — owner read/delete on extracted images
    - `20260914090000_content_blocks_owner_write_and_storage_cleanup.sql` — owner insert/update/delete on content_blocks (required for inline text uploads) + delete policy on private documents bucket
    - `20260914100000_storage_path_and_private_images.sql` — `storage_path` / `source_url` columns; private `document-images` + select for document readers (signed URLs)
+   - `20260919120000_dark_first_theme_defaults.sql` — dark-first redesign: `theme` defaults to `'dark'` (existing `'light'` rows migrated; users can switch back in Settings), WPM/font factory defaults aligned with the new reader
    - **CLI (preferred):** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
    - **SQL Editor:** run each file in timestamp order
    - Skipping later migrations is the most common cause of uploads ending in **Error**
@@ -175,10 +220,11 @@ python -m pytest
 ```
 
 The unit suites cover the code that is easiest to break and hardest to spot:
-tokenization, ORP splitting, Markdown stripping, math detection, the RSVP
-playback state machine (`src/lib/reader-engine.ts`), preference validation,
-block→row mapping, and the processor's shared-secret check. They need no
-Supabase credentials and no network access.
+tokenization, ORP splitting, Line Flow line packing (`src/lib/lines.ts`),
+Markdown stripping, math detection, the RSVP playback state machine
+(`src/lib/reader-engine.ts`), preference validation, block→row mapping, and
+the processor's shared-secret check. They need no Supabase credentials and no
+network access.
 
 ## CI
 

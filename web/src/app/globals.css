@@ -1,60 +1,138 @@
 @import "tailwindcss";
 
 /*
-  Recovered from original TanStack Readify preview source:
-  --color-bg #f6f1e8, Newsreader display, Source Sans 3 body
+  Readify design system — dark-first, green-tinted.
+
+  The baseline (`:root`) is the dark theme; `.light` and `.sepia` opt out of
+  it. That flips the old model (light baseline + `.dark` class) so the
+  marketing site, the auth pages and every signed-out reader get the
+  signature look without any theme plumbing, while signed-in users can still
+  pick Light or Sepia for long sessions.
+
+  Accent: emerald. On dark it is mint-bright (#34d399); on light it deepens
+  (#059669) so body-text contrast stays accessible.
 */
 
 :root {
-  --background: #f6f1e8;
-  --foreground: #1a1814;
-  --color-bg: #f6f1e8;
-  --color-bg-elevated: #fffdf8;
-  --color-surface: #ffffff;
-  --color-ink: #1a1814;
-  --color-muted: #7a7368;
-  --color-subtle: #a39c92;
-  --color-line: #e8e0d4;
-  --color-orp: #4f46e5;
-  --color-progress: #4f46e5;
-  --color-ink-inv: #f7f3ea;
-  --color-paper: #171717;
-  --shadow-card: 0 1px 2px rgb(26 24 20 / 0.04), 0 8px 24px rgb(26 24 20 / 0.05);
+  /* ---- dark (default) ---- */
+  --background: #060a08;
+  --foreground: #eaf3ec;
 
-  --bg: var(--color-bg);
-  --ink: var(--color-ink);
-  --muted: var(--color-muted);
-  --line: var(--color-line);
-  --surface: var(--color-surface);
+  --color-bg: #060a08;
+  --color-bg-elevated: #0b120e;
+  --color-surface: #0e1712;
+  --color-surface-soft: #14201a;
+  --color-ink: #eaf3ec;
+  --color-muted: #9db0a3;
+  --color-subtle: #647a6b;
+  --color-line: #1b2a21;
+  --color-line-strong: #2b4033;
+
+  --color-accent: #34d399;
+  --color-accent-strong: #10b981;
+  --color-accent-deep: #047857;
+  --color-accent-soft: rgba(52, 211, 153, 0.12);
+  --color-accent-text: #6ee7b7;
+  --color-on-accent: #04150d;
+
+  --color-orp: #34d399;
+  --color-progress: #34d399;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
+
+  /* High-contrast "paper" pill: near-white on dark, near-black on light. */
+  --color-paper: #eef7f0;
+  --color-ink-inv: #0a120d;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.35);
+  --shadow-glow: 0 0 48px rgba(52, 211, 153, 0.14);
+  --glow-radial: radial-gradient(
+    50% 50% at 50% 40%,
+    rgba(52, 211, 153, 0.09) 0%,
+    rgba(52, 211, 153, 0) 100%
+  );
+
+  color-scheme: dark;
 }
 
-@custom-variant dark (&:where(.dark, .dark *));
+.light {
+  --background: #f4f8f4;
+  --foreground: #101a13;
 
-.dark {
-  --background: #141210;
-  --foreground: #f5f0e8;
-  --color-bg: #141210;
-  --color-bg-elevated: #1c1917;
-  --color-surface: #1c1917;
-  --color-ink: #f5f0e8;
-  --color-muted: #a8a29e;
-  --color-subtle: #78716c;
-  --color-line: #292524;
-  --color-orp: #818cf8;
-  --color-progress: #818cf8;
-  --color-ink-inv: #1a1814;
-  --color-paper: #f5f0e8;
+  --color-bg: #f4f8f4;
+  --color-bg-elevated: #fbfdfb;
+  --color-surface: #ffffff;
+  --color-surface-soft: #ecf2ec;
+  --color-ink: #101a13;
+  --color-muted: #55665a;
+  --color-subtle: #83968a;
+  --color-line: #dce7dd;
+  --color-line-strong: #c2d3c5;
+
+  --color-accent: #059669;
+  --color-accent-strong: #047857;
+  --color-accent-deep: #065f46;
+  --color-accent-soft: rgba(5, 150, 105, 0.1);
+  --color-accent-text: #047857;
+  --color-on-accent: #ffffff;
+
+  --color-orp: #059669;
+  --color-progress: #059669;
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.08);
+
+  --color-paper: #12241a;
+  --color-ink-inv: #f4f8f4;
+
+  --shadow-card: 0 1px 2px rgb(16 26 19 / 0.05), 0 10px 28px rgb(16 26 19 / 0.07);
+  --shadow-glow: 0 0 48px rgba(5, 150, 105, 0.1);
+  --glow-radial: radial-gradient(
+    50% 50% at 50% 40%,
+    rgba(5, 150, 105, 0.07) 0%,
+    rgba(5, 150, 105, 0) 100%
+  );
+
+  color-scheme: light;
 }
 
 .sepia {
-  --background: #f0e2c5;
-  --foreground: #3d2f1c;
-  --color-bg: #f0e2c5;
-  --color-bg-elevated: #faf0d4;
-  --color-surface: #faf0d4;
-  --color-ink: #3d2f1c;
-  --color-muted: #8a7a5c;
-  --color-line: #e4d3aa;
+  --background: #f2e9d6;
+  --foreground: #33291a;
+
+  --color-bg: #f2e9d6;
+  --color-bg-elevated: #f9f1df;
+  --color-surface: #f9f1df;
+  --color-surface-soft: #efe4cb;
+  --color-ink: #33291a;
+  --color-muted: #7d6f55;
+  --color-subtle: #a08f6e;
+  --color-line: #e2d4b4;
+  --color-line-strong: #d0bd94;
+
+  --color-accent: #4c7c3f;
+  --color-accent-strong: #3d6733;
+  --color-accent-deep: #2f5227;
+  --color-accent-soft: rgba(76, 124, 63, 0.12);
+  --color-accent-text: #3d6733;
+  --color-on-accent: #fbf6e9;
+
+  --color-orp: #4c7c3f;
+  --color-progress: #4c7c3f;
+  --color-danger: #b3402e;
+  --color-danger-soft: rgba(179, 64, 46, 0.1);
+
+  --color-paper: #2c2415;
+  --color-ink-inv: #f6eeda;
+
+  --shadow-card: 0 1px 2px rgb(51 41 26 / 0.06), 0 10px 28px rgb(51 41 26 / 0.09);
+  --shadow-glow: 0 0 48px rgba(76, 124, 63, 0.12);
+  --glow-radial: radial-gradient(
+    50% 50% at 50% 40%,
+    rgba(76, 124, 63, 0.08) 0%,
+    rgba(76, 124, 63, 0) 100%
+  );
+
+  color-scheme: light;
 }
 
 @theme inline {
@@ -63,16 +141,39 @@
   --color-bg: var(--color-bg);
   --color-bg-elevated: var(--color-bg-elevated);
   --color-surface: var(--color-surface);
+  --color-surface-soft: var(--color-surface-soft);
   --color-ink: var(--color-ink);
   --color-muted: var(--color-muted);
   --color-subtle: var(--color-subtle);
   --color-line: var(--color-line);
+  --color-line-strong: var(--color-line-strong);
+  --color-accent: var(--color-accent);
+  --color-accent-strong: var(--color-accent-strong);
+  --color-accent-deep: var(--color-accent-deep);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-text: var(--color-accent-text);
+  --color-on-accent: var(--color-on-accent);
   --color-orp: var(--color-orp);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
   --color-paper: var(--color-paper);
-  --font-sans: var(--font-source-sans), "Source Sans 3", system-ui, sans-serif;
+  --color-ink-inv: var(--color-ink-inv);
+
+  --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
   --font-display: var(--font-newsreader), "Newsreader", Georgia, serif;
-  --font-mono: var(--font-geist-mono);
-  --shadow-card: 0 1px 2px rgb(26 24 20 / 0.04), 0 8px 24px rgb(26 24 20 / 0.05);
+  --font-reader: var(--font-inter), "Inter", var(--font-noto-deva),
+    var(--font-noto-guj), system-ui, sans-serif;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-glow: var(--shadow-glow);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -80,12 +181,56 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* Slim, unobtrusive scrollbars that follow the theme. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
+
+/* ------------------------------------------------------------------ */
+/* Token utility classes (kept from the old system, extended)          */
+/* ------------------------------------------------------------------ */
+
+.text-ink { color: var(--color-ink); }
+.text-muted { color: var(--color-muted); }
+.text-subtle { color: var(--color-subtle); }
+.text-accent { color: var(--color-accent-text); }
+.text-orp { color: var(--color-orp); }
+.text-danger { color: var(--color-danger); }
+.bg-bg { background-color: var(--color-bg); }
+.bg-bg-elevated { background-color: var(--color-bg-elevated); }
+.bg-surface { background-color: var(--color-surface); }
+.bg-surface-soft { background-color: var(--color-surface-soft); }
+.bg-accent { background-color: var(--color-accent); }
+.bg-accent-soft { background-color: var(--color-accent-soft); }
+.bg-paper { background-color: var(--color-paper); }
+.text-ink-inv { color: var(--color-ink-inv); }
+.border-line { border-color: var(--color-line); }
+.border-line-strong { border-color: var(--color-line-strong); }
 
 .card {
   background: var(--color-surface);
@@ -95,18 +240,326 @@ body {
 }
 
 .card-elevated {
-  background: var(--color-surface);
+  background: var(--color-bg-elevated);
   border: 1px solid var(--color-line);
   border-radius: 1.25rem;
   box-shadow: var(--shadow-card);
 }
 
-.text-ink { color: var(--color-ink); }
-.text-muted { color: var(--color-muted); }
-.text-subtle { color: var(--color-subtle); }
-.bg-bg { background-color: var(--color-bg); }
-.bg-bg-elevated { background-color: var(--color-bg-elevated); }
-.border-line { border-color: var(--color-line); }
-.bg-paper { background-color: var(--color-paper); }
-.text-ink-inv { color: var(--color-ink-inv); }
-.text-orp { color: var(--color-orp); }
+/* ------------------------------------------------------------------ */
+/* Buttons & pills                                                     */
+/* ------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Green primary — the signature CTA. */
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.28);
+}
+.btn-primary:hover {
+  background: var(--color-accent-text);
+}
+.light .btn-primary,
+.sepia .btn-primary {
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
+}
+.light .btn-primary:hover,
+.sepia .btn-primary:hover {
+  background: var(--color-accent-strong);
+  color: var(--color-on-accent);
+}
+
+/* High-contrast paper pill (white on dark / black on light). */
+.btn-paper {
+  background: var(--color-paper);
+  color: var(--color-ink-inv);
+}
+.btn-paper:hover {
+  opacity: 0.88;
+}
+
+/* Outlined secondary. */
+.btn-outline {
+  border: 1px solid var(--color-line-strong);
+  background: transparent;
+  color: var(--color-ink);
+}
+.btn-outline:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+}
+
+/* Quiet tertiary. */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-muted);
+}
+.btn-ghost:hover {
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+}
+
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.8125rem; }
+.btn-md { padding: 0.75rem 1.375rem; font-size: 0.875rem; }
+.btn-lg { padding: 0.9375rem 1.75rem; font-size: 0.9375rem; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 0.3125rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+
+.pill-accent {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Inputs                                                              */
+/* ------------------------------------------------------------------ */
+
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.input::placeholder {
+  color: var(--color-subtle);
+}
+.input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+/* Themed range sliders (reader + settings). */
+.range-accent {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-line-strong);
+  outline: none;
+  cursor: pointer;
+}
+.range-accent::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 3px solid var(--color-bg-elevated);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 120ms ease;
+}
+.range-accent::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.range-accent::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 3px solid var(--color-bg-elevated);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* ------------------------------------------------------------------ */
+/* Signature effects                                                   */
+/* ------------------------------------------------------------------ */
+
+/* Soft green radial glow behind heroes / the reader stage. */
+.glow-radial {
+  background-image: var(--glow-radial);
+}
+
+/* Hairline grid used on the marketing hero backdrop. */
+.grid-backdrop {
+  background-image:
+    linear-gradient(rgba(120, 200, 160, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 200, 160, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(70% 60% at 50% 30%, black 30%, transparent 100%);
+}
+
+/* Horizontal edge fade for the sliding line reader. */
+.fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Animations                                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 36s linear infinite;
+}
+.marquee-paused:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+}
+.reveal.reveal-in {
+  animation: reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes word-swap-in {
+  from { opacity: 0; transform: translateY(0.55em); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes word-swap-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-0.55em); }
+}
+.word-swap-in {
+  animation: word-swap-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes line-enter-forward {
+  from { opacity: 0; transform: translateX(36px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes line-enter-backward {
+  from { opacity: 0; transform: translateX(-36px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.line-enter-forward {
+  animation: line-enter-forward 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.line-enter-backward {
+  animation: line-enter-backward 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Opacity-only: the popover positioning transform must not be overridden. */
+@keyframes popover-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.popover-in {
+  animation: popover-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Opacity-only so the measured pivot transform is never overridden. */
+@keyframes orp-word-in {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+.orp-word-in {
+  animation: orp-word-in 110ms ease-out;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float {
+  animation: float-y 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee,
+  .animate-pulse-soft,
+  .animate-float,
+  .reveal.reveal-in,
+  .word-swap-in,
+  .line-enter-forward,
+  .line-enter-backward {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1;
+  }
+}
+
+/* Bottom sheet entrance (mobile reader settings). */
+@keyframes sheet-in {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.sheet-in {
+  animation: sheet-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Opt-in variant for the light/sepia themes (baseline is dark). */
+@custom-variant light (&:where(.light, .light *));

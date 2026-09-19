@@ -1,32 +1,31 @@
 const TABS = ["Document", "YouTube", "Text"];
 
+function Bone({ className }: { className: string }) {
+  return <span className={`block rounded bg-surface-soft ${className}`} />;
+}
+
 export default function UploadLoading() {
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 animate-pulse">
-      <h1 className="h-7 w-48 rounded bg-gray-200 text-2xl font-bold tracking-tight text-gray-900" />
-      <p className="mt-2 h-4 w-72 rounded bg-gray-100" />
+    <div className="mx-auto w-full max-w-2xl animate-pulse px-4 py-8 sm:px-6 md:py-12">
+      <Bone className="h-8 w-48" />
+      <Bone className="mt-2.5 h-4 w-72" />
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="card mt-6 overflow-hidden">
         {/* Tab bar skeleton */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex gap-1.5 border-b border-line p-3 sm:p-4">
           {TABS.map((tab) => (
-            <div key={tab} className="flex flex-1 items-center justify-center gap-2 px-3 py-3.5">
-              <span className="h-4 w-4 rounded bg-gray-100" />
-              <span className="h-3.5 w-16 rounded bg-gray-200" />
-            </div>
+            <Bone key={tab} className="h-10 flex-1 rounded-xl" />
           ))}
         </div>
 
         {/* Form skeleton */}
-        <div className="space-y-4 p-5 sm:p-6">
-          <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
-            <span className="h-10 w-10 rounded-full bg-gray-100" />
-            <span className="mt-3 h-4 w-56 rounded bg-gray-200" />
-            <span className="mt-2 h-3 w-72 rounded bg-gray-100" />
+        <div className="space-y-4 p-4 sm:p-6">
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line-strong p-10 text-center">
+            <Bone className="h-12 w-12 rounded-2xl" />
+            <Bone className="mt-4 h-4 w-56" />
+            <Bone className="mt-2 h-3 w-72 max-w-full" />
           </div>
-          <div className="h-10 w-full rounded-xl border border-gray-100 bg-gray-50" />
-          <div className="h-24 w-full rounded-xl border border-gray-100 bg-gray-50" />
-          <div className="h-11 w-full rounded-xl bg-gray-100" />
+          <Bone className="h-12 w-full rounded-full" />
         </div>
       </div>
     </div>

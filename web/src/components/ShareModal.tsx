@@ -132,34 +132,34 @@ function ShareModalContent({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-md rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
+      <div className="sheet-in relative w-full max-w-md rounded-t-3xl border border-line bg-bg-elevated p-6 shadow-2xl sm:rounded-3xl">
         <button
           type="button"
           onClick={onClose}
           aria-label="Close share dialog"
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-surface-soft text-muted transition hover:text-ink"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4.5 w-4.5" />
         </button>
 
-        <h2 className="text-lg font-bold tracking-tight text-gray-900">
+        <h2 className="text-lg font-extrabold tracking-tight text-ink">
           Share this reading
         </h2>
-        <p className="text-sm text-gray-500">Anyone with this link can view</p>
+        <p className="mt-0.5 text-sm text-muted">Anyone with this link can view</p>
 
         {/* Link field */}
-        <div className="mt-4 flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-2">
-          <span className="min-w-0 flex-1 truncate text-sm text-gray-700">
+        <div className="mt-4 flex items-center gap-2 rounded-2xl border border-line bg-surface-soft/60 py-2 pl-3.5 pr-2">
+          <span className="min-w-0 flex-1 truncate text-sm text-muted">
             {shareUrl}
           </span>
           <button
             type="button"
             onClick={handleCopy}
             className={clsx(
-              "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition",
+              "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition",
               copied
-                ? "bg-emerald-50 text-emerald-600"
-                : "bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50",
+                ? "bg-accent-soft text-accent"
+                : "bg-surface text-ink ring-1 ring-line hover:ring-line-strong",
             )}
           >
             {copied ? (
@@ -174,22 +174,22 @@ function ShareModalContent({
         {/* Visibility */}
         <div
           className={clsx(
-            "mt-5 rounded-xl border transition-all",
+            "mt-5 rounded-2xl border transition-all",
             highlightVisibility
-              ? "border-indigo-400 ring-2 ring-indigo-100"
+              ? "border-accent/60 ring-2 ring-accent/20"
               : "border-transparent",
           )}
         >
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-subtle">
             Visibility
           </p>
           <div className="space-y-2">
             <label
               className={clsx(
-                "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition",
+                "flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition",
                 visibility === "private"
-                  ? "border-indigo-500"
-                  : "border-gray-200 hover:border-gray-300",
+                  ? "border-accent/60 bg-accent-soft/50"
+                  : "border-line hover:border-line-strong",
               )}
             >
               <input
@@ -203,19 +203,19 @@ function ShareModalContent({
                 className={clsx(
                   "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
                   visibility === "private"
-                    ? "border-indigo-600"
-                    : "border-gray-300",
+                    ? "border-accent"
+                    : "border-line-strong",
                 )}
               >
                 {visibility === "private" && (
-                  <span className="h-2 w-2 rounded-full bg-indigo-600" />
+                  <span className="h-2 w-2 rounded-full bg-accent" />
                 )}
               </span>
               <span>
-                <span className="block text-sm font-semibold text-gray-900">
+                <span className="block text-sm font-bold text-ink">
                   Private
                 </span>
-                <span className="block text-xs text-gray-500">
+                <span className="block text-xs text-muted">
                   Only you can access.
                 </span>
               </span>
@@ -223,10 +223,10 @@ function ShareModalContent({
 
             <label
               className={clsx(
-                "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition",
+                "flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition",
                 visibility === "public"
-                  ? "border-indigo-500"
-                  : "border-gray-200 hover:border-gray-300",
+                  ? "border-accent/60 bg-accent-soft/50"
+                  : "border-line hover:border-line-strong",
               )}
             >
               <input
@@ -240,19 +240,19 @@ function ShareModalContent({
                 className={clsx(
                   "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
                   visibility === "public"
-                    ? "border-indigo-600"
-                    : "border-gray-300",
+                    ? "border-accent"
+                    : "border-line-strong",
                 )}
               >
                 {visibility === "public" && (
-                  <span className="h-2 w-2 rounded-full bg-indigo-600" />
+                  <span className="h-2 w-2 rounded-full bg-accent" />
                 )}
               </span>
               <span>
-                <span className="block text-sm font-semibold text-gray-900">
+                <span className="block text-sm font-bold text-ink">
                   Public
                 </span>
-                <span className="block text-xs text-gray-500">
+                <span className="block text-xs text-muted">
                   Anyone with the link can view.
                 </span>
               </span>
@@ -261,19 +261,19 @@ function ShareModalContent({
         </div>
 
         {/* Document preview */}
-        <div className="mt-5 flex items-center gap-3 rounded-xl bg-gray-50 p-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+        <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-surface-soft/60 p-3.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
             <FileText className="h-4 w-4" />
           </span>
           <span className="min-w-0 truncate">
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-semibold text-ink">
               {doc.title}
-              <span className="mx-1.5 font-normal text-gray-400">·</span>
-              <span className="font-normal text-gray-500">
+              <span className="mx-1.5 font-normal text-subtle">·</span>
+              <span className="font-normal text-muted">
                 {doc.wordCount.toLocaleString()} words
               </span>
-              <span className="mx-1.5 font-normal text-gray-400">·</span>
-              <span className="font-normal text-gray-500">
+              <span className="mx-1.5 font-normal text-subtle">·</span>
+              <span className="font-normal text-muted">
                 {doc.readMinutes} min
               </span>
             </span>
@@ -284,7 +284,7 @@ function ShareModalContent({
         <button
           type="button"
           onClick={handleShareLink}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+          className="btn btn-primary btn-lg mt-5 w-full"
         >
           Share link
         </button>
