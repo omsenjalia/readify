@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import clsx from "clsx";
-import { KeyRound, LogOut } from "lucide-react";
+import { KeyRound, LogOut, Type } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReadingPreferences } from "@/types";
 import {
@@ -18,48 +18,17 @@ import {
   type Theme,
 } from "@/lib/constants";
 import { updatePreferences } from "@/lib/preferences-api";
+import { applyThemeClass } from "@/hooks/useReaderSettings";
+import { SettingRow } from "@/components/reader/SettingsPanel";
 
 const THEME_LABELS: Record<Theme, string> = {
-  light: "Light",
   dark: "Dark",
+  light: "Light",
   sepia: "Sepia",
 };
 
 /** Single source of truth: the theme list comes from shared constants. */
 const THEME_OPTIONS = THEMES.map((id) => ({ id, label: THEME_LABELS[id] }));
-
-function SettingToggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between rounded-lg px-1 py-2"
-    >
-      <span className="text-sm font-medium text-gray-700">{label}</span>
-      <span
-        className={clsx(
-          "relative h-5 w-9 rounded-full transition",
-          checked ? "bg-[#4F6EF6]" : "bg-gray-300",
-        )}
-      >
-        <span
-          className={clsx(
-            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition",
-            checked ? "left-[18px]" : "left-0.5",
-          )}
-        />
-      </span>
-    </button>
-  );
-}
 
 export default function SettingsForm({
   preferences,
@@ -70,7 +39,11 @@ export default function SettingsForm({
 }) {
   const [wpm, setWpm] = useState(preferences.default_wpm);
   const [fontSize, setFontSize] = useState(preferences.font_size);
-  const [theme, setTheme] = useState<Theme>(preferences.theme as Theme);
+  const [theme, setTheme] = useState<Theme>(
+    THEMES.includes(preferences.theme as Theme)
+      ? (preferences.theme as Theme)
+      : "dark",
+  );
   const [showProgressBar, setShowProgressBar] = useState(
     preferences.show_progress_bar,
   );
@@ -89,11 +62,7 @@ export default function SettingsForm({
 
   // Apply theme live so Settings mirrors the Reader.
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("dark", "sepia");
-    if (theme === "dark" || theme === "sepia") {
-      root.classList.add(theme);
-    }
+    applyThemeClass(theme);
   }, [theme]);
 
   useEffect(
@@ -147,29 +116,32 @@ export default function SettingsForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-        Settings
-      </h1>
-      <p className="mt-1 text-sm text-gray-500">
-        Customize how you read and manage your account.
-      </p>
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 md:py-12">
+      <header className="mb-7">
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink">
+          Settings
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          Tune how you read, and manage your account.
+        </p>
+      </header>
 
       {/* Reading settings */}
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Reading settings
-          </h2>
+      <section className="card overflow-hidden">
+        <div className="border-b border-line px-5 py-4">
+          <h2 className="text-sm font-bold text-ink">Reading defaults</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Applied to every new reading session.
+          </p>
         </div>
         <div className="space-y-6 p-5 sm:p-6">
           {/* Words per minute */}
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-sm font-semibold text-ink">
                 Words per minute
               </span>
-              <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-sm font-semibold text-indigo-700">
+              <span className="pill pill-accent !text-xs font-bold tabular-nums">
                 {wpm} WPM
               </span>
             </div>
@@ -184,10 +156,10 @@ export default function SettingsForm({
                 setWpm(next);
                 queueSave({ default_wpm: next });
               }}
-              className="w-full accent-[#4F6EF6]"
+              className="range-accent"
               aria-label="Words per minute"
             />
-            <div className="mt-1 flex justify-between text-[10px] text-gray-400">
+            <div className="mt-1.5 flex justify-between text-[10px] font-medium text-subtle tabular-nums">
               <span>{WPM_MIN}</span>
               <span>{WPM_MAX}</span>
             </div>
@@ -195,16 +167,15 @@ export default function SettingsForm({
 
           {/* Font size */}
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
-                Font size
-              </span>
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-sm font-semibold text-ink">Font size</span>
               <span
-                className="leading-none text-gray-900"
-                style={{ fontSize: Math.min(fontSize, 40) }}
+                className="flex items-center gap-1.5 font-bold leading-none text-ink tabular-nums"
                 aria-hidden="true"
               >
-                Aa
+                <Type className="h-3.5 w-3.5 text-subtle" />
+                <span style={{ fontSize: Math.min(fontSize * 0.55, 22) }}>Aa</span>
+                <span className="text-xs text-muted">{fontSize}px</span>
               </span>
             </div>
             <input
@@ -218,10 +189,10 @@ export default function SettingsForm({
                 setFontSize(next);
                 queueSave({ font_size: next });
               }}
-              className="w-full accent-[#4F6EF6]"
+              className="range-accent"
               aria-label="Font size"
             />
-            <div className="mt-1 flex justify-between text-[10px] text-gray-400">
+            <div className="mt-1.5 flex justify-between text-[10px] font-medium text-subtle tabular-nums">
               <span>{FONT_MIN}</span>
               <span>{FONT_MAX}</span>
             </div>
@@ -229,7 +200,7 @@ export default function SettingsForm({
 
           {/* Theme */}
           <div>
-            <div className="mb-2 text-sm font-medium text-gray-700">Theme</div>
+            <div className="mb-2.5 text-sm font-semibold text-ink">Theme</div>
             <div className="grid grid-cols-3 gap-2">
               {THEME_OPTIONS.map((t) => (
                 <button
@@ -240,12 +211,14 @@ export default function SettingsForm({
                     queueSave({ theme: t.id });
                   }}
                   className={clsx(
-                    "rounded-lg border px-3 py-2 text-sm font-medium transition",
+                    "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
                     theme === t.id
-                      ? "border-[#4F6EF6] bg-[#4F6EF6] text-white"
-                      : "border-gray-200 text-gray-600 hover:border-gray-300",
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-line text-muted hover:border-line-strong hover:text-ink",
                   )}
+                  aria-pressed={theme === t.id}
                 >
+                  <ThemeSwatch id={t.id} />
                   {t.label}
                 </button>
               ))}
@@ -253,8 +226,8 @@ export default function SettingsForm({
           </div>
 
           {/* Toggles */}
-          <div className="space-y-1 border-t border-gray-100 pt-4">
-            <SettingToggle
+          <div className="space-y-3.5 border-t border-line pt-5">
+            <SettingRow
               label="Show progress bar"
               checked={showProgressBar}
               onChange={(next) => {
@@ -262,7 +235,7 @@ export default function SettingsForm({
                 queueSave({ show_progress_bar: next });
               }}
             />
-            <SettingToggle
+            <SettingRow
               label="Highlight ORP character"
               checked={highlightOrp}
               onChange={(next) => {
@@ -270,7 +243,7 @@ export default function SettingsForm({
                 queueSave({ highlight_orp: next });
               }}
             />
-            <SettingToggle
+            <SettingRow
               label="Auto-pause images (15s)"
               checked={autoPauseImages}
               onChange={(next) => {
@@ -280,18 +253,18 @@ export default function SettingsForm({
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Account */}
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="text-sm font-semibold text-gray-900">Account</h2>
+      <section className="card mt-5 overflow-hidden">
+        <div className="border-b border-line px-5 py-4">
+          <h2 className="text-sm font-bold text-ink">Account</h2>
         </div>
-        <div className="space-y-4 p-5 sm:p-6">
+        <div className="space-y-5 p-5 sm:p-6">
           <div>
             <label
               htmlFor="account-email"
-              className="mb-1.5 block text-sm font-medium text-gray-700"
+              className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
             >
               Email
             </label>
@@ -300,7 +273,7 @@ export default function SettingsForm({
               type="email"
               value={email}
               readOnly
-              className="w-full cursor-not-allowed rounded-xl border border-gray-300 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500 outline-none"
+              className="input cursor-not-allowed !bg-surface-soft !text-muted"
             />
           </div>
 
@@ -311,7 +284,8 @@ export default function SettingsForm({
                 setPasswordOpen((v) => !v);
                 setPasswordError(null);
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50"
+              className="btn btn-outline btn-md"
+              aria-expanded={passwordOpen}
             >
               <KeyRound className="h-4 w-4" />
               Change password
@@ -320,12 +294,12 @@ export default function SettingsForm({
             {passwordOpen && (
               <form
                 onSubmit={handleChangePassword}
-                className="mt-4 space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4"
+                className="mt-4 space-y-3.5 rounded-2xl border border-line bg-surface-soft/50 p-4"
               >
                 <div>
                   <label
                     htmlFor="new-password"
-                    className="mb-1.5 block text-sm font-medium text-gray-700"
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
                   >
                     New password
                   </label>
@@ -335,13 +309,13 @@ export default function SettingsForm({
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="At least 6 characters"
-                    className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="input"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="confirm-password"
-                    className="mb-1.5 block text-sm font-medium text-gray-700"
+                    className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
                   >
                     Confirm new password
                   </label>
@@ -351,12 +325,19 @@ export default function SettingsForm({
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm your new password"
-                    className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="input"
                   />
                 </div>
 
                 {passwordError && (
-                  <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+                  <p
+                    className="rounded-xl px-3.5 py-2.5 text-sm font-medium"
+                    style={{
+                      background: "var(--color-danger-soft)",
+                      color: "var(--color-danger)",
+                    }}
+                    role="alert"
+                  >
                     {passwordError}
                   </p>
                 )}
@@ -365,14 +346,14 @@ export default function SettingsForm({
                   <button
                     type="button"
                     onClick={() => setPasswordOpen(false)}
-                    className="rounded-lg px-3.5 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+                    className="btn btn-ghost btn-md"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={changingPassword}
-                    className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
+                    className="btn btn-primary btn-md disabled:opacity-60"
                   >
                     {changingPassword ? "Updating…" : "Update password"}
                   </button>
@@ -381,17 +362,36 @@ export default function SettingsForm({
             )}
           </div>
 
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t border-line pt-4">
             <Link
               href="/logout"
-              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-danger transition hover:bg-danger-soft"
             >
               <LogOut className="h-4 w-4" />
               Sign out
             </Link>
           </div>
         </div>
-      </div>
+      </section>
     </div>
+  );
+}
+
+/** A tiny two-tone preview of each theme. */
+function ThemeSwatch({ id }: { id: Theme }) {
+  const palette: Record<Theme, [string, string]> = {
+    dark: ["#0b120e", "#34d399"],
+    light: ["#ffffff", "#059669"],
+    sepia: ["#f9f1df", "#4c7c3f"],
+  };
+  const [bg, dot] = palette[id];
+  return (
+    <span
+      className="flex h-4 w-6 shrink-0 items-center justify-center rounded-[5px] border border-line-strong"
+      style={{ background: bg }}
+      aria-hidden="true"
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
+    </span>
   );
 }

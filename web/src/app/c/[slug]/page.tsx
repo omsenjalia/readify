@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getDocumentBySlug } from "@/lib/documents";
 import { flattenBlocks } from "@/lib/flatten";
+import { PREFERENCE_DEFAULTS } from "@/lib/constants";
 import { resolveImageUrl, signImageUrls } from "@/lib/images";
 import type {
   ContentBlock,
@@ -106,7 +107,8 @@ export default async function ReaderPage({
   const total = items.length;
   const initialIndex =
     wordIndex !== null && wordIndex >= 0 && wordIndex < total ? wordIndex : 0;
-  const initialWpm = sessionWpm ?? preferences?.default_wpm ?? 800;
+  const initialWpm =
+    sessionWpm ?? preferences?.default_wpm ?? PREFERENCE_DEFAULTS.default_wpm;
 
   return (
     <ReaderClient

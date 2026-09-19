@@ -5,12 +5,13 @@ import type { ReadItem } from "@/lib/flatten";
 import OrpWord from "@/components/reader/OrpWord";
 import MathStage from "@/components/reader/MathStage";
 
-/** Vertical space reserved for the previous/next word previews. */
-const STAGE_HEIGHT = 240;
-
 /**
- * The reading stage: the previous word (faded, above), the current word or
- * formula (centred), and the next word (faded, below).
+ * Classic RSVP stage: the previous word (faded, above), the current word or
+ * formula (centred on the pivot axis), and the next word (faded, below).
+ *
+ * The optical-axis rail now runs through the true centre of the stage and
+ * the word itself is aligned by measurement (`OrpWord`), so long words can
+ * no longer drift off-axis.
  */
 export default function WordStage({
   current,
@@ -26,12 +27,28 @@ export default function WordStage({
   highlightOrp: boolean;
 }) {
   const currentWord = current?.kind === "word" ? current.text : "";
+  const stageHeight = Math.max(220, Math.round(fontSize * 5.2));
 
   return (
     <div
-      className="flex w-full max-w-3xl flex-col items-center justify-center"
-      style={{ height: STAGE_HEIGHT }}
+      className="relative flex w-full max-w-4xl flex-col items-center justify-center select-none"
+      style={{ height: stageHeight, fontFamily: "var(--font-reader)" }}
     >
+      {/* Optical-axis rail + top marker, dead centre. */}
+      <div
+        className="pointer-events-none absolute inset-y-6 left-1/2 w-px -translate-x-1/2"
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-accent) 26%, transparent), transparent)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute left-1/2 top-5 h-1.5 w-1.5 -translate-x-1/2 rounded-full"
+        style={{ background: "var(--color-accent)" }}
+        aria-hidden="true"
+      />
+
       <ContextLine item={previous} fontSize={fontSize} />
 
       <div className="relative flex w-full items-center justify-center">
@@ -72,15 +89,18 @@ function ContextLine({
 
   return (
     <div
-      className="flex h-[40%] w-full items-center justify-center overflow-hidden"
-      style={{
-        fontSize: fontSize * 0.6,
-        color: "var(--muted-foreground)",
-        opacity: 0.3,
-      }}
+      className="fade-x flex h-[38%] w-full items-center justify-center overflow-hidden"
       aria-hidden="true"
     >
-      <span className="truncate">{text}</span>
+      <span
+        className="max-w-full truncate whitespace-nowrap font-medium"
+        style={{
+          fontSize: fontSize * 0.55,
+          color: "color-mix(in srgb, var(--color-ink) 24%, transparent)",
+        }}
+      >
+        {text}
+      </span>
     </div>
   );
 }

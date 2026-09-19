@@ -6,13 +6,11 @@ import clsx from "clsx";
 /**
  * A click-to-open popover anchored above its trigger.
  *
- * `Reader.tsx` had four hand-rolled copies of this pattern (speed, font size,
- * settings and the document menu), each with its own `fixed inset-0` scrim and
- * none of them closing on Escape. This one closes on outside click *and*
- * Escape, and stops the Escape from also toggling playback.
- *
- * The trigger is supplied fully wired by the caller, which keeps the owning
- * component in charge of which panel is open (only one at a time).
+ * One shared implementation for the speed, font-size and settings panels:
+ * closes on outside click *and* Escape, and stops the Escape from also
+ * toggling playback. The trigger is supplied fully wired by the caller,
+ * which keeps the owning component in charge of which panel is open (only
+ * one at a time).
  */
 export default function Popover({
   open,
@@ -61,7 +59,8 @@ export default function Popover({
             role="dialog"
             aria-label={label}
             className={clsx(
-              "absolute bottom-10 z-20 rounded-xl border border-gray-200 bg-white p-4 shadow-xl",
+              "popover-in absolute bottom-11 z-20 rounded-2xl border border-line bg-bg-elevated p-4",
+              "shadow-[var(--shadow-card)]",
               align === "center" && "left-1/2 -translate-x-1/2",
               align === "right" && "right-0",
               className,

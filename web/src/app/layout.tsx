@@ -1,47 +1,112 @@
-import type { Metadata } from "next";
-import { Newsreader, Source_Sans_3, Noto_Sans_Devanagari, Noto_Sans_Gujarati } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
-const newsreader = Newsreader({
+/*
+ * Self-hosted variable fonts (Fontsource packages). next/font/google would
+ * hit fonts.googleapis.com at build time — an external dependency, a privacy
+ * leak and a build failure whenever the network is restricted. The woff2s are
+ * tiny (~50KB each) and versioned with the app.
+ */
+
+const inter = localFont({
+  src: [
+    {
+      path: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-italic.woff2",
+      weight: "100 900",
+      style: "italic",
+    },
+  ],
+  variable: "--font-inter",
+  display: "swap",
+  fallback: ["system-ui", "-apple-system", "sans-serif"],
+});
+
+const newsreader = localFont({
+  src: [
+    {
+      path: "../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2",
+      weight: "200 800",
+      style: "normal",
+    },
+    {
+      path: "../../node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-italic.woff2",
+      weight: "200 800",
+      style: "italic",
+    },
+  ],
   variable: "--font-newsreader",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+  display: "swap",
+  fallback: ["Georgia", "serif"],
 });
 
-const sourceSans = Source_Sans_3({
-  variable: "--font-source-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const notoDeva = Noto_Sans_Devanagari({
+const notoDeva = localFont({
+  src: [
+    {
+      path: "../../node_modules/@fontsource-variable/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
   variable: "--font-noto-deva",
-  subsets: ["devanagari"],
-  weight: ["400", "600", "700"],
+  display: "swap",
 });
 
-const notoGuj = Noto_Sans_Gujarati({
+const notoGuj = localFont({
+  src: [
+    {
+      path: "../../node_modules/@fontsource-variable/noto-sans-gujarati/files/noto-sans-gujarati-gujarati-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
   variable: "--font-noto-guj",
-  subsets: ["gujarati"],
-  weight: ["400", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Readify",
-  description: "RSVP speed reader with optimal recognition point highlighting",
+  title: {
+    default: "Readify — Read at the speed of thought",
+    template: "%s — Readify",
+  },
+  description:
+    "Readify turns PDFs, documents and YouTube transcripts into a focused speed-reading stream. Line Flow keeps your eyes perfectly still while the text moves.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#060a08",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${newsreader.variable} ${sourceSans.variable} ${notoDeva.variable} ${notoGuj.variable} h-full antialiased`}
+      className={`${inter.variable} ${newsreader.variable} ${notoDeva.variable} ${notoGuj.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg text-ink">
         {children}
-        <Toaster position="top-center" />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "var(--color-bg-elevated)",
+              color: "var(--color-ink)",
+              border: "1px solid var(--color-line)",
+              borderRadius: "999px",
+              fontSize: "14px",
+              boxShadow: "var(--shadow-card)",
+            },
+          }}
+        />
       </body>
     </html>
   );

@@ -17,8 +17,8 @@ import type { ReaderSettings } from "@/hooks/useReaderSettings";
 import SliderRow from "@/components/reader/SliderRow";
 
 const THEME_LABELS: Record<Theme, string> = {
-  light: "Light",
   dark: "Dark",
+  light: "Light",
   sepia: "Sepia",
 };
 
@@ -26,8 +26,7 @@ const THEME_LABELS: Record<Theme, string> = {
  * Speed / font / theme / toggle controls.
  *
  * Rendered in two places (the desktop popover and the mobile bottom sheet);
- * the reader used to define this markup once as a `const` inside the render
- * body, which rebuilt the whole tree on every word.
+ * keeping it one component means the two can never drift.
  */
 export default function SettingsPanel({
   settings,
@@ -61,8 +60,8 @@ export default function SettingsPanel({
       />
 
       <div>
-        <div className="mb-1.5 text-xs font-medium text-gray-500">Theme</div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="mb-2 text-xs font-medium text-muted">Theme</div>
+        <div className="grid grid-cols-3 gap-1.5">
           {THEMES.map((id) => (
             <button
               key={id}
@@ -74,10 +73,10 @@ export default function SettingsPanel({
                 });
               }}
               className={clsx(
-                "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                "rounded-xl border px-3 py-2 text-xs font-semibold transition",
                 settings.theme === id
-                  ? "border-[#4F6EF6] bg-[#4F6EF6] text-white"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300",
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-line text-muted hover:border-line-strong hover:text-ink",
               )}
             >
               {THEME_LABELS[id]}
@@ -86,7 +85,7 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <SettingRow
           label="Show progress bar"
           checked={settings.showProgressBar}
@@ -98,7 +97,7 @@ export default function SettingsPanel({
           }}
         />
         <SettingRow
-          label="Highlight ORP char"
+          label="Highlight ORP character"
           checked={settings.highlightOrp}
           onChange={(v) => {
             settings.setHighlightOrp(v);
@@ -137,19 +136,19 @@ export function SettingRow({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between"
+      className="flex w-full items-center justify-between gap-4"
     >
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-medium text-ink">{label}</span>
       <span
         className={clsx(
-          "relative h-5 w-9 rounded-full transition",
-          checked ? "bg-[#4F6EF6]" : "bg-gray-300",
+          "relative h-5.5 w-10 shrink-0 rounded-full transition-colors duration-200",
+          checked ? "bg-accent" : "border border-line-strong bg-surface-soft",
         )}
       >
         <span
           className={clsx(
-            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition",
-            checked ? "left-[18px]" : "left-0.5",
+            "absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow transition-all duration-200",
+            checked ? "left-[19px]" : "left-0.5",
           )}
         />
       </span>

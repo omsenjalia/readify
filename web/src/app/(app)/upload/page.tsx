@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { looksLikeMarkdown, prepareReadableText } from "@/lib/markdown";
 import toast from "react-hot-toast";
 import clsx from "clsx";
-import { AlignLeft, FileText, Loader2, Play, type LucideIcon } from "lucide-react";
+import {
+  AlignLeft,
+  FileText,
+  Loader2,
+  Play,
+  type LucideIcon,
+} from "lucide-react";
 import DragDrop from "@/components/DragDrop";
 import { createClient } from "@/lib/supabase/client";
 import { extractYouTubeId } from "@/lib/youtube";
@@ -29,10 +35,10 @@ interface PendingDoc {
   error_msg?: string | null;
 }
 
-const TABS: { id: Tab; label: string; icon: LucideIcon; color: string }[] = [
-  { id: "document", label: "Document", icon: FileText, color: "text-indigo-600" },
-  { id: "youtube", label: "YouTube", icon: Play, color: "text-red-500" },
-  { id: "text", label: "Text / Markdown", icon: AlignLeft, color: "text-gray-400" },
+const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
+  { id: "document", label: "Document", icon: FileText },
+  { id: "youtube", label: "YouTube", icon: Play },
+  { id: "text", label: "Text / Markdown", icon: AlignLeft },
 ];
 
 function titleFromFilename(name: string): string {
@@ -265,49 +271,59 @@ export default function UploadPage() {
   const doneCount = pendingDocs.filter((d) => d.status !== "processing").length;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-10 md:py-14">
-      <h1 className="font-display text-3xl tracking-tight text-[var(--ink)]">
-        Add to your library
-      </h1>
-      <p className="mt-2 text-sm text-[var(--muted)]">
-        Upload a file (PDF, DOCX, TXT, Markdown), paste a YouTube link, or paste
-        text / Markdown.
-      </p>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 md:py-12">
+      <header className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink">
+          Add to your library
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          Upload a file, paste a YouTube link, or drop in raw text — it&apos;s
+          reading-ready in seconds.
+        </p>
+      </header>
 
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex border-b border-gray-200">
-          {TABS.map(({ id, label, icon: Icon, color }) => (
+      <div className="card overflow-hidden">
+        {/* Tabs — pill scroller on phones */}
+        <div className="flex gap-1.5 overflow-x-auto border-b border-line p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:p-4">
+          {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
               onClick={() => setTab(id)}
               disabled={phase !== "idle"}
               className={clsx(
-                "flex flex-1 items-center justify-center gap-2 border-b-2 px-3 py-3.5 text-sm transition",
+                "flex shrink-0 flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
                 tab === id
-                  ? "border-indigo-600 font-semibold text-gray-900"
-                  : "border-transparent text-gray-400 hover:text-gray-600",
+                  ? "bg-accent-soft text-accent"
+                  : "text-muted hover:bg-surface-soft hover:text-ink",
                 phase !== "idle" && "cursor-not-allowed opacity-60",
               )}
+              aria-pressed={tab === id}
             >
-              <Icon className={clsx("h-4 w-4", tab === id ? color : "text-gray-400")} />
-              {label}
+              <Icon className="h-4 w-4" strokeWidth={2} />
+              <span className="whitespace-nowrap">{label}</span>
             </button>
           ))}
         </div>
 
-        <div className="p-5 sm:p-6">
+        <div className="p-4 sm:p-6">
           {phase === "processing" ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-              <p className="mt-4 text-sm font-medium text-gray-900">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="relative flex h-14 w-14 items-center justify-center">
+                <span
+                  className="absolute inset-0 animate-ping rounded-full bg-accent/20"
+                  aria-hidden="true"
+                />
+                <Loader2 className="relative h-8 w-8 animate-spin text-accent" />
+              </span>
+              <p className="mt-5 text-sm font-bold text-ink">
                 {pendingDocs.length > 1
                   ? `Processing ${doneCount} of ${pendingDocs.length} documents…`
                   : "Processing your document…"}
               </p>
-              {progressMsg && (
-                <p className="mt-2 text-sm text-[var(--muted)]">{progressMsg}</p>
-              )}
+              <p className="mt-1.5 text-xs text-muted">
+                {progressMsg ?? "Extracting text and figures"}
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -322,7 +338,7 @@ export default function UploadPage() {
                       value={ytTitle}
                       onChange={(e) => setYtTitle(e.target.value)}
                       placeholder="Give your video a title…"
-                      className={INPUT_CLASS}
+                      className="input"
                     />
                   </Field>
                   <Field label="YouTube URL" htmlFor="yt-url">
@@ -332,11 +348,11 @@ export default function UploadPage() {
                       value={ytUrl}
                       onChange={(e) => setYtUrl(e.target.value)}
                       placeholder="Paste a YouTube URL…"
-                      className={INPUT_CLASS}
+                      className="input"
                     />
                     {videoId && (
-                      <p className="mt-1.5 text-xs font-medium text-indigo-600">
-                        Video: {videoId}
+                      <p className="mt-2 text-xs font-semibold text-accent">
+                        Video detected: {videoId}
                       </p>
                     )}
                   </Field>
@@ -352,23 +368,23 @@ export default function UploadPage() {
                       value={textTitle}
                       onChange={(e) => setTextTitle(e.target.value)}
                       placeholder="Give your text a title…"
-                      className={INPUT_CLASS}
+                      className="input"
                     />
                   </Field>
                   <div>
-                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
                       <label
                         htmlFor="text-content"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
                       >
                         Content
                       </label>
-                      <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted">
                         <input
                           type="checkbox"
                           checked={treatAsMarkdown}
                           onChange={(e) => setTreatAsMarkdown(e.target.checked)}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          className="h-4 w-4 rounded border-line-strong bg-bg accent-[var(--color-accent)]"
                         />
                         Treat as Markdown
                       </label>
@@ -379,13 +395,11 @@ export default function UploadPage() {
                       onChange={(e) => setTextContent(e.target.value)}
                       placeholder="Paste plain text or Markdown — headings, lists, **bold**, links, and code fences are cleaned for speed reading…"
                       rows={8}
-                      className="min-h-[200px] w-full resize-y rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="input min-h-[200px] resize-y"
                     />
-                    <p className="mt-1.5 text-xs text-gray-500">
+                    <p className="mt-2 text-xs font-medium text-subtle tabular-nums">
                       {new Intl.NumberFormat().format(wordCount)} words
-                      {treatAsMarkdown
-                        ? " · Markdown syntax will be stripped"
-                        : ""}
+                      {treatAsMarkdown ? " · Markdown syntax stripped" : ""}
                     </p>
                   </div>
                 </>
@@ -394,7 +408,7 @@ export default function UploadPage() {
               <button
                 type="submit"
                 disabled={phase === "uploading"}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--ink)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn btn-primary btn-lg w-full disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {phase === "uploading" && (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -415,9 +429,6 @@ export default function UploadPage() {
   );
 }
 
-const INPUT_CLASS =
-  "w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
-
 function Field({
   label,
   htmlFor,
@@ -431,7 +442,7 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="mb-1.5 block text-sm font-medium text-gray-700"
+        className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-subtle"
       >
         {label}
       </label>

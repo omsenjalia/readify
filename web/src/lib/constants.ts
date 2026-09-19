@@ -21,16 +21,22 @@ export const IMAGE_BUCKET = "document-images";
 
 /** Used by GET /api/preferences, the settings page and the reader. */
 export const PREFERENCE_DEFAULTS = {
-  default_wpm: 800,
-  font_size: 48,
-  theme: "light",
+  default_wpm: 600,
+  font_size: 44,
+  theme: "dark",
   show_progress_bar: true,
   highlight_orp: true,
   auto_pause_images: true,
 } as const;
 
-export type Theme = "light" | "dark" | "sepia";
-export const THEMES: readonly Theme[] = ["light", "dark", "sepia"];
+/**
+ * Dark is the baseline theme (no class on <html>); `light` and `sepia` are
+ * opt-in overrides applied via a class. Listed dark-first so theme pickers
+ * show the default first.
+ */
+export type Theme = "dark" | "light" | "sepia";
+export const THEMES: readonly Theme[] = ["dark", "light", "sepia"];
+export const DEFAULT_THEME: Theme = "dark";
 
 /** Minimal shape the reader needs; kept structural so it accepts rows. */
 export interface ReaderPrefs {
@@ -43,6 +49,32 @@ export interface ReaderPrefs {
 }
 
 /* ------------------------------------------------------------------ */
+/* Reading modes                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * How the reader presents text:
+ *
+ *  - `line` — Line Flow. The whole current line is visible and slides
+ *    horizontally so the focused word's ORP character sits exactly on the
+ *    centre of the stage. The eye never moves; the text does.
+ *  - `word` — classic RSVP. One word at a time, ORP character locked to the
+ *    centre axis, with dimmed previous/next word previews.
+ */
+export type ReadingMode = "line" | "word";
+export const READING_MODES: readonly ReadingMode[] = ["line", "word"];
+export const DEFAULT_READING_MODE: ReadingMode = "line";
+
+/**
+ * Line Flow packs words into display lines up to this fraction of the stage
+ * width, leaving breathing room so the slide never looks wall-to-wall.
+ */
+export const LINE_FILL_RATIO = 0.92;
+
+/** Longest Line Flow display line, in characters, when measuring fails. */
+export const LINE_FALLBACK_CHARS = 46;
+
+/* ------------------------------------------------------------------ */
 /* Reader limits                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -51,12 +83,12 @@ export const WPM_MAX = 800;
 export const WPM_STEP = 25;
 export const WPM_PRESETS = [200, 400, 600, 800] as const;
 
-export const FONT_MIN = 28;
+export const FONT_MIN = 24;
 export const FONT_MAX = 68;
 export const FONT_STEP = 4;
-/** Phones get a smaller default so words still fit on one line. */
-export const FONT_DEFAULT_DESKTOP = 48;
-export const FONT_DEFAULT_MOBILE = 36;
+/** Phones get a smaller default so lines still hold several words. */
+export const FONT_DEFAULT_DESKTOP = 44;
+export const FONT_DEFAULT_MOBILE = 32;
 
 /** Breakpoint for the mobile reader layout (matches the Tailwind `sm`). */
 export const SMALL_VIEWPORT_QUERY = "(max-width: 639px)";

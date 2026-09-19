@@ -1,56 +1,70 @@
-import { Search, Upload } from "lucide-react";
-
 const ROWS = 6;
 
 const TABS = ["All", "Documents", "YouTube", "Shared", "Favorites"];
 
+/** Shared skeleton primitives — token-coloured so they work in every theme. */
+function Bone({ className }: { className: string }) {
+  return <span className={`block rounded bg-surface-soft ${className}`} />;
+}
+
 export default function LibraryLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 animate-pulse">
+    <div className="mx-auto w-full max-w-5xl animate-pulse px-4 py-8 sm:px-6 md:py-10">
+      <Bone className="h-8 w-40" />
+      <Bone className="mt-2.5 h-4 w-64" />
+
       {/* Search & Upload */}
-      <div className="flex items-center gap-3">
-        <div className="relative w-2/5 min-w-[180px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <div className="h-10 w-full rounded-xl border border-gray-200 bg-gray-100" />
-        </div>
-        <div className="ml-auto flex h-10 w-28 items-center gap-1.5 rounded-xl bg-gray-100">
-          <Upload className="h-4 w-4 text-gray-400" />
-        </div>
+      <div className="mt-6 flex items-center gap-2.5">
+        <Bone className="h-10 w-full max-w-xs rounded-full" />
+        <Bone className="ml-auto h-10 w-24 rounded-full" />
       </div>
 
       {/* Filter tabs */}
-      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-gray-200">
-        {TABS.map((tab) => (
-          <div key={tab} className="flex items-center gap-2 px-3 py-2.5">
-            <span className="h-4 w-10 rounded bg-gray-200" />
-            <span className="h-3 w-5 rounded-full bg-gray-100" />
+      <div className="mt-5 flex gap-1.5 overflow-hidden">
+        {TABS.map((tab, i) => (
+          <Bone
+            key={tab}
+            className={`h-9 rounded-full ${i === 0 ? "w-20" : "w-24"}`}
+          />
+        ))}
+      </div>
+
+      {/* Desktop table skeleton */}
+      <div className="card mt-5 hidden overflow-hidden md:block">
+        <div className="border-b border-line px-5 py-3">
+          <Bone className="h-3 w-full max-w-md" />
+        </div>
+        {Array.from({ length: ROWS }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 border-b border-line/60 px-5 py-4 last:border-0"
+          >
+            <Bone className="h-6 w-9 shrink-0 rounded-lg" />
+            <Bone className="h-4 flex-1 max-w-64" />
+            <Bone className="hidden h-5 w-14 rounded-full md:block" />
+            <Bone className="hidden h-4 w-12 md:block" />
+            <Bone className="h-5 w-20 rounded-full" />
           </div>
         ))}
       </div>
 
-      {/* Table skeleton */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="hidden grid-cols-5 gap-4 border-b border-gray-200 px-6 py-3 md:grid">
-          {["Title", "Type", "Words", "Last read", "Status"].map((col) => (
-            <div key={col}>
-              <span className="h-3 w-12 rounded bg-gray-100" />
-            </div>
-          ))}
-        </div>
-        <div className="divide-y divide-gray-100">
-          {Array.from({ length: ROWS }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-6 py-3.5 md:grid md:grid-cols-5">
-              <div className="flex min-w-0 flex-1 items-center gap-3 md:col-span-1">
-                <span className="h-6 w-8 shrink-0 rounded-sm bg-gray-100" />
-                <span className="h-4 flex-1 rounded bg-gray-200" />
+      {/* Mobile card skeleton */}
+      <div className="mt-4 grid gap-2.5 md:hidden">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="card p-4">
+            <div className="flex items-start gap-3">
+              <Bone className="h-7 w-10 shrink-0 rounded-lg" />
+              <div className="flex-1">
+                <Bone className="h-4 w-3/4" />
+                <Bone className="mt-2 h-3 w-1/2" />
               </div>
-              <span className="hidden h-5 w-14 rounded-full bg-gray-100 md:block" />
-              <span className="hidden h-4 w-10 rounded bg-gray-200 md:block" />
-              <span className="hidden h-4 w-16 rounded bg-gray-200 md:block" />
-              <span className="h-5 w-20 rounded-full bg-gray-100" />
             </div>
-          ))}
-        </div>
+            <div className="mt-3.5 flex items-center justify-between">
+              <Bone className="h-5 w-20 rounded-full" />
+              <Bone className="h-8 w-8 rounded-lg" />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -4,9 +4,10 @@ import { AlignLeft, Play } from "lucide-react";
 /**
  * File-type badge for a document row.
  *
- * Replaces three divergent implementations (library table, stats page,
- * dashboard) that each rendered the same four source types with different
- * colours, radii and labels. One component, three sizes.
+ * One component, three sizes. Colours are conventional (red PDF, blue DOCX,
+ * red YouTube) but rendered as soft tinted pills so they sit inside the
+ * green-toned design system instead of shouting over it; plain text gets the
+ * brand accent.
  */
 
 type Size = "sm" | "md" | "lg";
@@ -14,7 +15,7 @@ type Size = "sm" | "md" | "lg";
 const SIZES: Record<Size, { box: string; text: string; icon: number }> = {
   sm: { box: "h-6 min-w-8 px-1", text: "text-[9px]", icon: 12 },
   md: { box: "h-7 min-w-10 px-1.5", text: "text-[10px]", icon: 14 },
-  lg: { box: "h-8 min-w-12 px-2", text: "text-[11px]", icon: 16 },
+  lg: { box: "h-9 min-w-12 px-2", text: "text-[11px]", icon: 16 },
 };
 
 const LABELS: Record<string, string> = {
@@ -36,18 +37,36 @@ export default function SourceBadge({
 }) {
   const s = SIZES[size];
   const base = clsx(
-    "inline-flex shrink-0 items-center justify-center rounded font-bold uppercase tracking-wide",
+    "inline-flex shrink-0 items-center justify-center rounded-lg font-bold uppercase tracking-wide",
     s.box,
     s.text,
     className,
   );
 
   if (type === "pdf") {
-    return <span className={clsx(base, "bg-red-600 text-white")}>PDF</span>;
+    return (
+      <span
+        className={clsx(
+          base,
+          "bg-red-500/15 text-red-400 light:bg-red-500/10 light:text-red-600",
+        )}
+      >
+        PDF
+      </span>
+    );
   }
 
   if (type === "docx") {
-    return <span className={clsx(base, "bg-blue-600 text-white")}>DOCX</span>;
+    return (
+      <span
+        className={clsx(
+          base,
+          "bg-sky-500/15 text-sky-400 light:bg-sky-500/10 light:text-sky-600",
+        )}
+      >
+        DOCX
+      </span>
+    );
   }
 
   if (type === "youtube") {
@@ -55,8 +74,7 @@ export default function SourceBadge({
       <span
         className={clsx(
           base,
-          "rounded-full bg-red-600 text-white",
-          s.box.replace(/min-w-\S+/, ""),
+          "rounded-full bg-red-500/15 text-red-400 light:bg-red-500/10 light:text-red-600",
         )}
         aria-label="YouTube"
       >
@@ -67,7 +85,7 @@ export default function SourceBadge({
 
   return (
     <span
-      className={clsx(base, "bg-[var(--surface-soft)] text-[var(--muted)]")}
+      className={clsx(base, "bg-accent-soft text-accent")}
       aria-label="Text document"
     >
       <AlignLeft size={s.icon} />

@@ -20,10 +20,10 @@ export default function MenuAction({
       type="button"
       onClick={onClick}
       className={clsx(
-        "flex w-full items-center gap-2.5 px-3 py-2 text-sm font-medium transition",
+        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition sm:py-2",
         danger
-          ? "text-red-600 hover:bg-red-50"
-          : "text-[var(--foreground)] hover:bg-[var(--surface-soft)]",
+          ? "text-danger hover:bg-danger-soft"
+          : "text-ink hover:bg-surface-soft",
       )}
     >
       {icon}
