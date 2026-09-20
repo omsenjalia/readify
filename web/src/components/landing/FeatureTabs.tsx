@@ -180,7 +180,7 @@ const FEATURES: Feature[] = [
     tab: "ORP precision",
     icon: <Crosshair className="h-4 w-4" />,
     title: "Pixel-perfect recognition point.",
-    copy: "Every word has an Optimal Recognition Point — the character your brain locks onto first. Readify measures real text metrics per script (Latin, Devanagari, Gujarati) and lands that character on the centre axis, every single time.",
+    copy: "Every word has an Optimal Recognition Point — the character your brain locks onto first. ReadIO measures real text metrics per script (Latin, Devanagari, Gujarati) and lands that character on the centre axis, every single time.",
     bullets: [
       "Measured alignment, never guessed columns",
       "Unicode-aware — works with हिन्दी and ગુજરાતી",
@@ -217,7 +217,7 @@ const FEATURES: Feature[] = [
 ];
 
 /**
- * The "Why Readify" block — a cerebrium-style tab rail beside a large
+ * The "Why ReadIO" block — a cerebrium-style tab rail beside a large
  * one-phrase-per-line display heading, with visual panels on the right.
  */
 export default function FeatureTabs() {
@@ -229,7 +229,7 @@ export default function FeatureTabs() {
       {/* Left rail */}
       <div>
         <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-accent">
-          Why Readify
+          Why ReadIO
         </p>
         <h2 className="mt-4 text-4xl font-extrabold leading-[1.04] tracking-tight text-ink sm:text-5xl">
           Built

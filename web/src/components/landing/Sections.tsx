@@ -100,7 +100,7 @@ const FAQS = [
   },
   {
     q: "What is the ORP?",
-    a: "The Optimal Recognition Point is the character within a word that your visual system locks onto first — usually slightly left of centre. Readify measures real text metrics and pins that character to the focus axis, which is why words feel instant rather than blurry.",
+    a: "The Optimal Recognition Point is the character within a word that your visual system locks onto first — usually slightly left of centre. ReadIO measures real text metrics and pins that character to the focus axis, which is why words feel instant rather than blurry.",
   },
   {
     q: "How is Line Flow different from one-word mode?",

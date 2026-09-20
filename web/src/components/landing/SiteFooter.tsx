@@ -73,11 +73,11 @@ export default function SiteFooter() {
             WebkitTextStroke: "1px var(--color-line-strong)",
           }}
         >
-          READIFY
+          READ/IO
         </div>
 
         <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 text-xs text-subtle sm:flex-row">
-          <p>© {new Date().getFullYear()} Readify. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} ReadIO. All rights reserved.</p>
           <p className="font-medium">
             Built for readers who refuse to skim.
           </p>

@@ -1,4 +1,4 @@
--- Readify initial schema: profiles, documents, content_blocks,
+-- ReadIO initial schema: profiles, documents, content_blocks,
 -- reading_sessions, reading_preferences + RLS + storage bucket.
 
 -- Enable UUID generation

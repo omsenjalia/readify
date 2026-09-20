@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the Readify web app and backend processor together.
+# Run the ReadIO web app and backend processor together.
 #
 #   ./dev.sh               # backend on :8001, frontend on :3000
 #   PORT=8002 ./dev.sh     # override the backend port
@@ -27,7 +27,7 @@ if [ ! -d web/node_modules ]; then
   exit 1
 fi
 
-echo "Starting Readify…"
+echo "Starting ReadIO…"
 echo "  Web:      http://localhost:${WEB_PORT}"
 echo "  Backend:  http://localhost:${BACKEND_PORT}/health"
 echo "  (Ctrl-C to stop both)"

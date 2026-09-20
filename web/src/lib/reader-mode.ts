@@ -14,10 +14,11 @@ import {
  * first client render matches the server render.
  */
 
-const STORAGE_KEY = "readify.reader.mode";
+const STORAGE_KEY = "readio.reader.mode";
+const LEGACY_STORAGE_KEY = "readify.reader.mode";
 
 /** Notifies same-tab listeners, since `storage` only fires in other tabs. */
-export const READER_MODE_EVENT = "readify:reader-mode";
+export const READER_MODE_EVENT = "readio:reader-mode";
 
 function normalize(value: unknown): ReadingMode {
   return typeof value === "string" &&
@@ -37,7 +38,10 @@ export function subscribeToReaderMode(onChange: () => void): () => void {
 
 export function getReaderMode(): ReadingMode {
   try {
-    return normalize(localStorage.getItem(STORAGE_KEY));
+    return normalize(
+      localStorage.getItem(STORAGE_KEY) ??
+        localStorage.getItem(LEGACY_STORAGE_KEY),
+    );
   } catch {
     return DEFAULT_READING_MODE;
   }

@@ -1,4 +1,4 @@
-# Readify
+# ReadIO
 
 Speed reader with **Line Flow** — the whole line slides beneath a single fixed
 focus point while the ORP (Optimal Recognition Point) character of each word
@@ -53,7 +53,7 @@ sample text, no account required.
 ## Project structure
 
 ```
-readify/
+readio/
 ├── web/                       Next.js app (App Router, src/ dir)
 │   ├── src/lib/               Pure logic (tokenizer, ORP, line layout, math,
 │   │                          reader engine, reader mode) + unit tests
@@ -78,8 +78,8 @@ readify/
 ## Quick start
 
 ```bash
-git clone https://github.com/omsenjalia/readify.git
-cd readify
+git clone https://github.com/omsenjalia/readio.git
+cd readio
 
 # 1. Configure env files
 cp web/.env.local.example web/.env.local

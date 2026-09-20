@@ -13,7 +13,8 @@ export function pctComplete(currentWord: number, totalWords: number): number {
 /* Local (signed-out) progress                                         */
 /* ------------------------------------------------------------------ */
 
-const LOCAL_PROGRESS_PREFIX = "readify:progress:";
+const LOCAL_PROGRESS_PREFIX = "readio:progress:";
+const LEGACY_PROGRESS_PREFIX = "readify:progress:";
 
 function localProgressKey(slug: string): string {
   return `${LOCAL_PROGRESS_PREFIX}${slug}`;
@@ -25,7 +26,7 @@ function localProgressKey(slug: string): string {
  * `storage` fires for other tabs; the custom event covers this one, since a
  * same-tab `localStorage.setItem` emits nothing.
  */
-export const LOCAL_PROGRESS_EVENT = "readify:local-progress";
+export const LOCAL_PROGRESS_EVENT = "readio:local-progress";
 
 export function subscribeToLocalProgress(onChange: () => void): () => void {
   window.addEventListener("storage", onChange);
@@ -40,7 +41,9 @@ export function getLocalProgress(
   slug: string,
 ): { index: number; wpm: number } | null {
   try {
-    const raw = localStorage.getItem(localProgressKey(slug));
+    const raw =
+      localStorage.getItem(localProgressKey(slug)) ??
+      localStorage.getItem(`${LEGACY_PROGRESS_PREFIX}${slug}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { index?: number; wpm?: number };
     return {

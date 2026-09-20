@@ -23,9 +23,10 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const STORAGE_KEY = "readify.sidebar.collapsed";
+const STORAGE_KEY = "readio.sidebar.collapsed";
+const LEGACY_STORAGE_KEY = "readify.sidebar.collapsed";
 /** Notifies same-tab listeners, since `storage` only fires in other tabs. */
-const TOGGLE_EVENT = "readify:sidebar-toggle";
+const TOGGLE_EVENT = "readio:sidebar-toggle";
 
 /**
  * Sidebar collapse state lives in localStorage (an external system), so it is
@@ -43,7 +44,10 @@ function subscribeToSidebar(onChange: () => void): () => void {
 
 function readCollapsed(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+    const value =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_STORAGE_KEY);
+    return value === "1";
   } catch {
     return false;
   }
@@ -109,7 +113,7 @@ export default function AppShell({
           <Link
             href="/dashboard"
             className={clsx("flex items-center", collapsed && "justify-center")}
-            title="Readify"
+            title="ReadIO"
           >
             <Brand size="sm" withWordmark={!collapsed} />
           </Link>
@@ -234,7 +238,7 @@ export default function AppShell({
           className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-bg/85 px-4 py-3 backdrop-blur-xl md:hidden"
           style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0.75rem))" }}
         >
-          <Link href="/dashboard" aria-label="Readify home">
+          <Link href="/dashboard" aria-label="ReadIO home">
             <Brand size="sm" />
           </Link>
           <div className="flex items-center gap-2">
