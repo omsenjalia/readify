@@ -24,7 +24,7 @@ in `web/src/app/globals.css`:
 
 | Mode | Behaviour |
 | ---- | --------- |
-| **Line Flow** (default) | The current line is laid out from measured text metrics (`lib/lines.ts` + `hooks/useLineLayout.ts`) and slides horizontally so the focused word's ORP character stays pinned to the centre axis. Neighbouring lines are dimmed above/below. `components/reader/LineStage.tsx` |
+| **Line Flow** (default) | The current line is laid out from measured text metrics (`lib/lines.ts` + `hooks/useLineLayout.ts`) and slides horizontally so the focused word stays pinned to the centre axis for its entire duration. Neighbouring lines are dimmed above/below. `components/reader/LineStage.tsx` |
 | **One word** | Classic RSVP: a single word, ORP-locked to the centre by measurement (`OrpWord.tsx`), with faded previous/next word previews |
 
 The mode is stored per device in localStorage (`lib/reader-mode.ts`) — no
