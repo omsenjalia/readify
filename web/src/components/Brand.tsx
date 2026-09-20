@@ -1,9 +1,9 @@
 import clsx from "clsx";
 
 /**
- * The Readify mark: three text lines with the green pivot dot on the centre
+ * The ReadIO mark: three text lines with the green pivot dot on the centre
  * line — Line Flow reduced to a glyph. The eye (dot) never moves; the lines
- * do.
+ * do. The wordmark is spelled Read/IO.
  */
 export default function Brand({
   size = "md",
@@ -65,7 +65,7 @@ export default function Brand({
       </svg>
       {withWordmark && (
         <span className={clsx("font-semibold tracking-tight text-ink", text)}>
-          Readify
+          Read<span className="text-accent">/</span>IO
         </span>
       )}
     </span>

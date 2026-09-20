@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  Readify design system — dark-first, green-tinted.
+  ReadIO design system — dark-first, green-tinted.
 
   The baseline (`:root`) is the dark theme; `.light` and `.sepia` opt out of
   it. That flips the old model (light baseline + `.dark` class) so the

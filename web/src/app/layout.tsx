@@ -71,12 +71,13 @@ const notoGuj = localFont({
 });
 
 export const metadata: Metadata = {
+  applicationName: "ReadIO",
   title: {
-    default: "Readify — Read at the speed of thought",
-    template: "%s — Readify",
+    default: "ReadIO — Read at the speed of thought",
+    template: "%s — ReadIO",
   },
   description:
-    "Readify turns PDFs, documents and YouTube transcripts into a focused speed-reading stream. Line Flow keeps your eyes perfectly still while the text moves.",
+    "ReadIO turns PDFs, documents and YouTube transcripts into a focused speed-reading stream. Line Flow keeps your eyes perfectly still while the text moves.",
 };
 
 export const viewport: Viewport = {

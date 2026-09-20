@@ -222,7 +222,7 @@ export default function ReaderClient({
         return;
       }
       setRemoteProgress(doc.id, userId, index, wpm).catch((err) =>
-        console.warn("Readify sync failed:", err),
+        console.warn("ReadIO sync failed:", err),
       );
     },
     [userId, doc.id, doc.slug],

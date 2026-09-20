@@ -38,7 +38,7 @@ export default function SiteNav() {
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="Readify home">
+        <Link href="/" aria-label="ReadIO home">
           <Brand size="sm" />
         </Link>
 
