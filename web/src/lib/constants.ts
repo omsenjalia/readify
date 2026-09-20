@@ -56,8 +56,8 @@ export interface ReaderPrefs {
  * How the reader presents text:
  *
  *  - `line` — Line Flow. The whole current line is visible and slides
- *    horizontally so the focused word's ORP character sits exactly on the
- *    centre of the stage. The eye never moves; the text does.
+ *    horizontally so the focused word stays centred for its entire duration.
+ *    The eye never moves; the text does.
  *  - `word` — classic RSVP. One word at a time, ORP character locked to the
  *    centre axis, with dimmed previous/next word previews.
  */
