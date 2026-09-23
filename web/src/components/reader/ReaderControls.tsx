@@ -2,6 +2,7 @@
 
 import {
   Gauge,
+  Maximize2,
   Pause,
   Play,
   RotateCcw,
@@ -44,6 +45,7 @@ export default function ReaderControls({
   onStep,
   onTogglePlay,
   onReset,
+  onFullscreen,
 }: {
   settings: ReaderSettings;
   playing: boolean;
@@ -54,6 +56,7 @@ export default function ReaderControls({
   onStep: (delta: number) => void;
   onTogglePlay: () => void;
   onReset: () => void;
+  onFullscreen?: () => void;
 }) {
   const panelToggle = (panel: ReaderPanel) => () =>
     setOpenPanel(openPanel === panel ? null : panel);
@@ -112,6 +115,22 @@ export default function ReaderControls({
 
       {/* Transport row */}
       <div className="flex items-center justify-center gap-1.5 sm:gap-3">
+        {/* Desktop-only fullscreen toggle. It completes the left side
+          ([fullscreen][reset][back] · play · [next][font][settings]) so the
+          play button sits exactly on the viewport centre; on mobile it is
+          hidden and the 2-vs-2 mobile row stays as is. */}
+        {onFullscreen && (
+          <button
+            type="button"
+            onClick={onFullscreen}
+            aria-label="Toggle fullscreen"
+            title="Fullscreen (F)"
+            className={clsx(iconButton, "hidden md:flex")}
+          >
+            <Maximize2 className="h-5 w-5" />
+          </button>
+        )}
+
         {/* Mobile-only settings. `order-last` moves it to the right edge on
           small screens so the transport row stays symmetric around the play
           button ([reset][back] · play · [next][settings]) instead of the

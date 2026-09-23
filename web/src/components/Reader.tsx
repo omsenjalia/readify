@@ -639,6 +639,7 @@ export default function ReaderClient({
             seek(0);
             toast.success("Back to the beginning", { id: "reader-reset" });
           }}
+          onFullscreen={toggleFullscreen}
         />
 
         {!isFullscreen && (

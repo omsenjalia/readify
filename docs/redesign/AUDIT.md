@@ -91,15 +91,18 @@ User-requested reader fixes, all shipped on this branch:
    reordered with One word primary and Line Flow secondary. Devices with
    a saved mode keep it (localStorage), so the flip only affects fresh
    visitors.
-4. **Mobile transport centred** — the mobile-only settings button sat
-   left of the play button, leaving 3 buttons on the left and 1 on the
-   right, so the play button sat 50px right of the screen centre
-   (measured: play centre 237.5px on a 375px viewport). It is now
-   `order-last` on small screens: `[reset][back] · play ·
-   [next][settings]` — play measured at exactly the viewport centre
-   (off-centre 0.0px). Desktop is unaffected (that button is
-   `md:hidden`; with 5 side buttons the best desktop balance is the
-   current −28px, improved from −56px before the reset button landed).
+4. **Transport row centred on mobile and desktop** — mobile: the
+   mobile-only settings button sat left of the play button (3 left / 1
+   right), leaving play 50px right of screen centre at 375px; it is now
+   `order-last` on small screens (`[reset][back] · play ·
+   [next][settings]`). Desktop had the same defect mildly: 2 left / 3
+   right (5 side buttons can't balance in a centred row), leaving play
+   −28px. Fixed by adding the already-supported fullscreen toggle
+   (visible on md+, hidden on mobile) as the 6th side button, making it
+   3 vs 3: `[fullscreen][reset][back] · play · [next][font][settings]`.
+   Measured: play at the viewport centre on both 375px and 1440px
+   (0.0px off-centre; was +50px / −28px). Fullscreen toggle verified
+   functionally (enters fullscreen, "Esc to exit" appears, no errors).
 
 All gates re-run after these changes: production build 15/15, 123/123
 tests, eslint 0, CLS 0.0000 on every page × width, no console/hydration
