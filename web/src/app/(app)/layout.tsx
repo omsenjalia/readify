@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/AppShell";
+import { THEME_CLASS, type Theme } from "@/lib/constants";
 
 export default async function AppLayout(props: LayoutProps<"/">) {
   const supabase = await createClient();
@@ -20,17 +21,16 @@ export default async function AppLayout(props: LayoutProps<"/">) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Dark is the baseline (no class); light/sepia opt in via a class applied
-  // before first paint so there is no theme flash.
-  const theme =
-    prefs?.theme === "light" || prefs?.theme === "sepia" ? prefs.theme : null;
+  // Paper (light) is the baseline (no class); dark→`.ink` and sepia opt in
+  // via a class applied before first paint so there is no theme flash.
+  const themeClass = THEME_CLASS[prefs?.theme as Theme] ?? null;
 
   return (
     <>
-      {theme ? (
+      {themeClass ? (
         <script
           dangerouslySetInnerHTML={{
-            __html: `document.documentElement.classList.add(${JSON.stringify(theme)});`,
+            __html: `document.documentElement.classList.add(${JSON.stringify(themeClass)});`,
           }}
         />
       ) : null}

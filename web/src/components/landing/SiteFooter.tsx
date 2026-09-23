@@ -1,85 +1,97 @@
+"use client";
+
 import Link from "next/link";
 import Brand from "@/components/Brand";
+import Reveal from "@/components/landing/Reveal";
 
-const COLUMNS = [
+const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Product",
     links: [
-      { label: "Features", href: "#features" },
-      { label: "How it works", href: "#how" },
-      { label: "Live demo", href: "/demo" },
-      { label: "FAQ", href: "#faq" },
+      { href: "#features", label: "Features" },
+      { href: "#how", label: "How it works" },
+      { href: "#faq", label: "FAQ" },
+      { href: "/demo", label: "Live demo" },
     ],
   },
   {
     title: "Account",
     links: [
-      { label: "Log in", href: "/login" },
-      { label: "Sign up", href: "/signup" },
-      { label: "Dashboard", href: "/dashboard" },
+      { href: "/signup", label: "Create account" },
+      { href: "/login", label: "Log in" },
+      { href: "/reader", label: "Reader" },
+      { href: "/library", label: "Your library" },
     ],
   },
   {
-    title: "Formats",
+    title: "Elsewhere",
     links: [
-      { label: "PDF", href: "/signup" },
-      { label: "DOCX", href: "/signup" },
-      { label: "YouTube", href: "/signup" },
-      { label: "Markdown & text", href: "/signup" },
+      {
+        href: "https://github.com/omsenjalia/readio",
+        label: "GitHub",
+      },
+      {
+        href: "https://github.com/omsenjalia/readio/blob/main/README.md",
+        label: "Docs & README",
+      },
     ],
   },
 ];
 
+/**
+ * Footer finale: the giant Fraunces wordmark with a variable-weight sweep,
+ * a quiet link grid, and a mono colophon line.
+ */
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-bg-elevated/40">
-      <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="border-t border-line bg-surface-soft/40">
+      <div className="mx-auto w-full max-w-6xl px-5 pb-10 pt-16 sm:px-8 sm:pt-20">
+        {/* Giant wordmark — weight sweeps in when it enters the viewport */}
+        <Reveal as="div" className="overflow-hidden">
+          <a
+            href="/"
+            aria-label="Read/IO home"
+            className="wordmark-sweep block select-none text-[clamp(4.5rem,17vw,15rem)] leading-[0.9] tracking-[-0.04em] text-ink"
+          >
+            Read<span className="text-accent">/</span>IO
+          </a>
+        </Reveal>
+
+        <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <Brand size="md" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-              The speed reader that moves the text, not your eyes. Read PDFs,
-              docs and transcripts at the speed of thought.
+            <Brand size="sm" />
+            <p className="mt-4 max-w-56 text-sm leading-relaxed text-muted">
+              Silent reading at the speed of thought. Drop in anything, set
+              your pace, and let the page walk.
             </p>
           </div>
           {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-subtle">
+            <nav key={col.title} aria-label={col.title}>
+              <h3 className="mono text-[11px] font-semibold uppercase tracking-[0.22em] text-subtle">
                 {col.title}
-              </p>
+              </h3>
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm font-medium text-muted transition hover:text-accent"
+                      className="text-sm text-muted transition hover:text-ink"
                     >
                       {link.label}
                     </Link>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
         </div>
 
-        {/* Oversized wordmark — the cerebrium footer flourish. */}
-        <div
-          className="mt-14 select-none text-center font-extrabold leading-none tracking-tight"
-          aria-hidden="true"
-          style={{
-            fontSize: "clamp(3.5rem, 14vw, 11rem)",
-            color: "transparent",
-            WebkitTextStroke: "1px var(--color-line-strong)",
-          }}
-        >
-          READ/IO
-        </div>
-
-        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 text-xs text-subtle sm:flex-row">
-          <p>© {new Date().getFullYear()} ReadIO. All rights reserved.</p>
-          <p className="font-medium">
-            Built for readers who refuse to skim.
+        <div className="mt-14 flex flex-col items-start justify-between gap-3 border-t border-line pt-6 sm:flex-row sm:items-center">
+          <p className="mono text-[11px] font-medium uppercase tracking-[0.18em] text-subtle">
+            © 2026 Readio
+          </p>
+          <p className="mono text-[11px] font-medium uppercase tracking-[0.18em] text-subtle">
+            Built for eyes that move too fast
           </p>
         </div>
       </div>

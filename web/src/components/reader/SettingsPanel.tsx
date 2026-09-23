@@ -17,8 +17,8 @@ import type { ReaderSettings } from "@/hooks/useReaderSettings";
 import SliderRow from "@/components/reader/SliderRow";
 
 const THEME_LABELS: Record<Theme, string> = {
-  dark: "Dark",
-  light: "Light",
+  light: "Paper",
+  dark: "Ink",
   sepia: "Sepia",
 };
 
@@ -147,7 +147,7 @@ export function SettingRow({
       >
         <span
           className={clsx(
-            "absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow transition-all duration-200",
+            "absolute top-0.5 h-[18px] w-[18px] rounded-full bg-ink-inv shadow transition-all duration-200",
             checked ? "left-[19px]" : "left-0.5",
           )}
         />

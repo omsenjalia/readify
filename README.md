@@ -1,21 +1,26 @@
-# ReadIO
+# Read/IO
 
-Speed reader with **Line Flow** — the whole line slides beneath a single fixed
-focus point while the ORP (Optimal Recognition Point) character of each word
-lands exactly where your eye is already resting. Your eyes never move; the
-text does. A classic one-word RSVP mode is built in too.
+Readio — a speed reader with **Line Flow**: the whole line slides beneath a
+single fixed focus point while the ORP (Optimal Recognition Point) character
+of each word lands exactly where your eye is already resting. Your eyes never
+move; the text does. A classic one-word RSVP mode is built in too.
 
 Upload a document, get a shareable link, and read at up to 800 WPM.
 
 ## Design
 
-Dark-first, green-toned UI (emerald on near-black) with a full token system
-in `web/src/app/globals.css`:
+"Paper" — a light-first editorial system: warm white ground, near-black ink,
+hairline rules and one restrained ultramarine accent (the ORP pivot, links,
+focus). Full token system in `web/src/app/globals.css`:
 
-- `:root` — dark (the baseline; marketing, auth and the default app theme)
-- `.light` / `.sepia` — opt-in reading themes, switchable per user
-- Shared primitives: `.btn-primary|outline|ghost|paper`, `.card`, `.pill`,
-  `.input`, `.range-accent`, focus glows and scroll-reveal animations
+- `:root` — Paper (the baseline; marketing, auth and the default app theme)
+- `.ink` / `.sepia` — opt-in reading themes, switchable per user
+  (`dark` in stored preferences maps to `.ink`)
+- Type: Fraunces (variable display), Mona Sans (variable body/UI),
+  Geist Mono (labels); Noto Sans Devanagari/Gujarati for Indic scripts
+- Shared primitives: `.btn-primary|accent|ghost|outline|paper`, `.card`,
+  `.pill`, `.input`, `.range-accent`, focus glows, scroll-reveal and
+  mask-line heading animations (all visible without motion)
 - Mobile-first everywhere: bottom tab nav with a centre upload button,
   bottom-sheet settings, tap zones + swipe gestures in the reader,
   `dvh` sizing and safe-area insets
@@ -60,7 +65,7 @@ readio/
 │   ├── src/hooks/             useReaderEngine / useReaderSettings /
 │   │                          useLineLayout / useReadingMode / useMediaQuery
 │   ├── src/components/
-│   │   ├── landing/           Marketing site (nav, hero, live demo, tabs, …)
+│   │   ├── landing/           Marketing site (nav, hero, live demo, chapters, …)
 │   │   ├── reader/            LineStage, WordStage, controls, panels
 │   │   └── …                  AppShell, library, upload, shared UI
 │   └── src/app/               Routes incl. public /demo reader playground

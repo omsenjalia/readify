@@ -128,7 +128,7 @@ function ShareModalContent({
       aria-label="Share this reading"
     >
       <div
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-ink/40"
         onClick={onClose}
         aria-hidden="true"
       />

@@ -15,7 +15,7 @@ import type { ReadItem } from "@/lib/flatten";
  */
 
 const SAMPLE =
-  "Your eyes never have to move now. The line slides beneath one fixed point of focus while the green pivot character lands exactly where your attention is already waiting. No searching, no skipping back, no lost place — just a steady rhythm that keeps accelerating until reading feels like thinking.";
+  "Your eyes never have to move now. The line slides beneath one fixed point of focus while the pivot character lands exactly where your attention is already waiting. No searching, no skipping back, no lost place — just a steady rhythm that keeps accelerating until reading feels like thinking.";
 
 const DEMO_WPM = 240;
 
@@ -65,24 +65,20 @@ export default function HeroDemo() {
   return (
     <div
       ref={cardRef}
-      className="relative w-full overflow-hidden rounded-3xl border border-line bg-bg-elevated/90 shadow-[var(--shadow-card)] backdrop-blur"
-      style={{ boxShadow: "var(--shadow-card), var(--shadow-glow)" }}
+      className="relative w-full overflow-hidden rounded-2xl border border-line bg-bg-elevated shadow-[var(--shadow-card)]"
     >
       {/* Card chrome */}
       <div className="flex items-center justify-between border-b border-line px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-          <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-          <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-        </div>
         <span className="pill pill-accent !text-[11px]">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
           </span>
-          Line Flow · live demo
+          <span className="mono uppercase tracking-[0.12em]">
+            Line Flow · live demo
+          </span>
         </span>
-        <span className="text-[11px] font-semibold text-subtle tabular-nums">
+        <span className="mono text-[11px] font-semibold text-subtle tabular-nums">
           {DEMO_WPM} WPM
         </span>
       </div>
@@ -123,7 +119,7 @@ export default function HeroDemo() {
           type="button"
           onClick={toggle}
           aria-label={playing ? "Pause demo" : "Play demo"}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent transition active:scale-95"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-bg transition active:scale-95"
         >
           {playing ? (
             <Pause className="h-4 w-4" fill="currentColor" />
@@ -131,8 +127,8 @@ export default function HeroDemo() {
             <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
           )}
         </button>
-        <p className="text-[11px] font-medium text-subtle sm:text-xs">
-          The green pivot never moves — the text does.{" "}
+        <p className="mono text-[11px] font-medium text-subtle sm:text-xs">
+          The pivot never moves — the text does.{" "}
           <span className="hidden sm:inline">Tap the card to pause.</span>
         </p>
       </div>
