@@ -6,6 +6,7 @@ from services.math_text import (
     glue_units,
     normalize_math_token,
 )
+from services.richtext import plain_text_to_html
 
 _ZW = re.compile(r"[\u200b\u200c\u200d\ufeff]")
 
@@ -88,9 +89,21 @@ def prepare_readable_text(text: str, force_markdown: bool = False) -> str:
 
 
 def extract_text(text: str) -> list[dict]:
-    """Split pasted/plain text or Markdown into paragraph blocks."""
+    """Split pasted/plain text or Markdown into paragraph blocks.
+
+    Markdown rendering lives in the web app (the inline upload path) — the
+    processor's copy keeps paragraphs as escaped `<p>` blocks so the editor
+    always has *something* structured, and `words` stay stripped for RSVP.
+    """
     text = prepare_readable_text(text)
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     if not paragraphs and text.strip():
         paragraphs = [text.strip()]
-    return [{"type": "paragraph", "text": p.replace("\n", " ")} for p in paragraphs]
+    return [
+        {
+            "type": "paragraph",
+            "text": paragraph.replace("\n", " "),
+            "html": plain_text_to_html(paragraph),
+        }
+        for paragraph in paragraphs
+    ]

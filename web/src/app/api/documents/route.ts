@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
-import { chunkWords, tokenizeText } from "@/lib/tokenize";
-import { prepareReadableText } from "@/lib/markdown";
+import { tokenizeText } from "@/lib/tokenize";
+import {
+  looksLikeMarkdown,
+  markdownToHtml,
+  plainTextToHtml,
+} from "@/lib/markdown";
+import { htmlToPlainText, splitTopLevelHtml } from "@/lib/editor";
 import { defaultYouTubeTitle, extractYouTubeId } from "@/lib/youtube";
 import { markDocumentError, notifyProcessor } from "@/lib/processor";
 
@@ -55,8 +60,13 @@ function defaultTitle(
 }
 
 /**
- * Plain text / Markdown never needs OCR: tokenize and persist in-process
- * instead of round-tripping through the Python processor.
+ * Plain text / Markdown never needs OCR: render, tokenize and persist
+ * in-process instead of round-tripping through the Python processor.
+ *
+ * The editor needs the *formatted* document, so each top-level HTML element
+ * (heading, paragraph, list, …) becomes one block carrying both the rich
+ * `html` and the RSVP `words` — derived from the same source, so the
+ * reader and the editing canvas always agree.
  */
 async function processTextInline(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -64,19 +74,39 @@ async function processTextInline(
   rawText: string,
   opts?: { forceMarkdown?: boolean },
 ): Promise<number> {
-  const plain = prepareReadableText(rawText, opts?.forceMarkdown === true);
-  const words = tokenizeText(plain);
-  const paragraphs = chunkWords(words, 80);
+  const trimmed = rawText.replace(/^﻿/, "");
+  const isMarkdown = opts?.forceMarkdown === true || looksLikeMarkdown(trimmed);
+  const html = isMarkdown ? markdownToHtml(trimmed) : plainTextToHtml(trimmed);
+
+  type Row = {
+    document_id: string;
+    position: number;
+    type: "text";
+    words: string[];
+    html: string;
+  };
+  const rows: Row[] = [];
+  let totalWords = 0;
+
+  for (const chunk of splitTopLevelHtml(html)) {
+    // Words come from the rendered HTML so both representations stay in
+    // lockstep: markdown syntax is already gone (it was transformed into
+    // tags, and htmlToPlainText drops tags), while the editor keeps it.
+    const words = tokenizeText(htmlToPlainText(chunk));
+    if (words.length === 0 && !/<hr\s*>/i.test(chunk)) continue;
+    rows.push({
+      document_id: documentId,
+      position: rows.length,
+      type: "text",
+      words,
+      html: chunk,
+    });
+    totalWords += words.length;
+  }
 
   await supabase.from("content_blocks").delete().eq("document_id", documentId);
 
-  if (paragraphs.length) {
-    const rows = paragraphs.map((paragraphWords, position) => ({
-      document_id: documentId,
-      position,
-      type: "text" as const,
-      words: paragraphWords,
-    }));
+  if (rows.length) {
     const { error } = await supabase.from("content_blocks").insert(rows);
     if (error) throw new Error(error.message);
   }
@@ -85,7 +115,7 @@ async function processTextInline(
     .from("documents")
     .update({
       status: "ready",
-      word_count: words.length,
+      word_count: totalWords,
       error_msg: null,
       progress_msg: null,
       updated_at: new Date().toISOString(),
@@ -93,7 +123,7 @@ async function processTextInline(
     .eq("id", documentId);
   if (error) throw new Error(error.message);
 
-  return words.length;
+  return totalWords;
 }
 
 export async function POST(request: NextRequest) {

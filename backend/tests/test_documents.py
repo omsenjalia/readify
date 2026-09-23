@@ -100,6 +100,26 @@ class TestBlocksToRows:
         )
         assert "needs_ocr" not in rows[0]
 
+    def test_text_row_carries_editor_html(self):
+        rows = blocks_to_rows(
+            "doc",
+            [{"type": "text", "text": "hi", "html": "<p>hi</p>"}],
+        )
+        assert rows[0]["html"] == "<p>hi</p>"
+        assert rows[0]["words"] == ["hi"]
+
+    def test_omitting_html_drops_the_column(self):
+        rows = blocks_to_rows(
+            "doc",
+            [{"type": "text", "text": "hi", "html": "<p>hi</p>"}],
+            include_html=False,
+        )
+        assert "html" not in rows[0]
+
+    def test_blocks_without_html_omit_the_key(self):
+        rows = blocks_to_rows("doc", [{"type": "text", "words": ["a"]}])
+        assert "html" not in rows[0]
+
 
 def persist(sb: FakeSupabase, **overrides):
     """Call persist_document with sensible defaults."""
@@ -169,14 +189,44 @@ class TestPersistDocument:
             assert "visibility" not in op.payload
             assert "is_favorite" not in op.payload
 
-    def test_retries_without_needs_ocr_when_column_is_missing(self):
-        sb = FakeSupabase(fail_first_content_insert=True)
-        persist(sb, blocks=[{"type": "image", "image_url": "p.png"}])
+    def test_retries_without_html_when_column_is_missing(self):
+        sb = FakeSupabase(missing_columns={"html"})
+        persist(sb, blocks=[{"type": "text", "text": "a", "html": "<p>a</p>"}])
 
         inserts = [op for op in sb.ops_named("insert") if op.table == "content_blocks"]
         assert len(inserts) == 2, "expected one failed insert and one retry"
+        assert "html" in inserts[0].payload[0]
+        assert "html" not in inserts[1].payload[0]
+        assert "needs_ocr" in inserts[1].payload[0]
+
+    def test_retries_down_to_oldest_schema_when_both_columns_missing(self):
+        sb = FakeSupabase(missing_columns={"needs_ocr", "html"})
+        persist(
+            sb,
+            blocks=[
+                {
+                    "type": "text",
+                    "text": "a",
+                    "html": "<p>a</p>",
+                }
+            ],
+        )
+
+        inserts = [op for op in sb.ops_named("insert") if op.table == "content_blocks"]
+        assert len(inserts) == 3, "full -> without html -> without needs_ocr"
+        assert "html" in inserts[0].payload[0]
         assert "needs_ocr" in inserts[0].payload[0]
-        assert "needs_ocr" not in inserts[1].payload[0], "the retry must drop the missing column"
+        assert "html" not in inserts[1].payload[0]
+        assert "needs_ocr" in inserts[1].payload[0]
+        assert "html" not in inserts[2].payload[0]
+        assert "needs_ocr" not in inserts[2].payload[0]
+
+    def test_success_on_first_try_when_schema_is_current(self):
+        sb = FakeSupabase()
+        persist(sb, blocks=[{"type": "text", "text": "a", "html": "<p>a</p>"}])
+        inserts = [op for op in sb.ops_named("insert") if op.table == "content_blocks"]
+        assert len(inserts) == 1
+        assert inserts[0].payload[0]["html"] == "<p>a</p>"
 
     def test_skips_block_insert_when_there_are_no_blocks(self):
         sb = FakeSupabase()

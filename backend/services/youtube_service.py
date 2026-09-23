@@ -3,6 +3,8 @@
 import re
 from urllib.parse import parse_qs, urlparse
 
+from services.richtext import plain_text_to_html
+
 #: Video ids are always 11 URL-safe base64 characters.
 _VIDEO_ID = re.compile(r"^[\w-]{11}$")
 
@@ -104,6 +106,12 @@ def extract_youtube_transcript(
     text = " ".join(snippet.text for snippet in transcript)
 
     return [
-        {"type": "paragraph", "text": paragraph}
+        {
+            "type": "paragraph",
+            "text": paragraph,
+            # Transcripts carry no formatting — structured paragraphs are
+            # all the editor needs to render them faithfully.
+            "html": plain_text_to_html(paragraph),
+        }
         for paragraph in group_into_paragraphs(text)
     ]

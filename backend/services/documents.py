@@ -50,11 +50,13 @@ def blocks_to_rows(
     blocks: Iterable[Block],
     *,
     include_needs_ocr: bool = True,
+    include_html: bool = True,
 ) -> list[dict[str, Any]]:
     """Flatten blocks into `content_blocks` insert rows.
 
-    `include_needs_ocr` exists because a partially-migrated database may not
-    have that column yet; the caller retries without it.
+    `include_needs_ocr` / `include_html` exist because a partially-migrated
+    database may not have those columns yet; the caller retries with fewer
+    columns until the insert lands (oldest schema last).
     """
     rows: list[dict[str, Any]] = []
 
@@ -71,6 +73,9 @@ def blocks_to_rows(
             row["image_url"] = block.get("image_url") or block.get("url")
         else:
             row["words"] = block_words(block)
+            html = block.get("html")
+            if include_html and html:
+                row["html"] = html
 
         if include_needs_ocr:
             row["needs_ocr"] = bool(block.get("needs_ocr")) if is_image else False
@@ -111,14 +116,31 @@ def persist_document(
     if rows:
         try:
             supabase.table("content_blocks").insert(rows).execute()
-        except Exception as exc:  # noqa: BLE001 - retry path for old schemas
+        except Exception as exc:  # noqa: BLE001 - retry paths for old schemas
+            # Columns were added over time (`needs_ocr` first, `html` later);
+            # drop the newest missing column first and keep descending.
             logger.warning(
-                "content_blocks insert with needs_ocr failed (%s); retrying without",
+                "content_blocks insert with html failed (%s); retrying without html",
                 exc,
             )
-            rows = blocks_to_rows(document_id, blocks, include_needs_ocr=False)
-            if rows:
-                supabase.table("content_blocks").insert(rows).execute()
+            rows = blocks_to_rows(document_id, blocks, include_html=False)
+            try:
+                if rows:
+                    supabase.table("content_blocks").insert(rows).execute()
+            except Exception as exc2:  # noqa: BLE001
+                logger.warning(
+                    "content_blocks insert without html failed (%s); "
+                    "retrying without needs_ocr",
+                    exc2,
+                )
+                rows = blocks_to_rows(
+                    document_id,
+                    blocks,
+                    include_html=False,
+                    include_needs_ocr=False,
+                )
+                if rows:
+                    supabase.table("content_blocks").insert(rows).execute()
 
     fields = {
         "title": title or "Untitled document",

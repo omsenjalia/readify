@@ -30,6 +30,21 @@ White-first, green-toned UI with a full token system in
 | **One word** (default) | Classic RSVP: a single word, ORP-locked to the centre by measurement (`OrpWord.tsx`), with faded previous/next word previews |
 | **Line Flow** | The current line is laid out from measured text metrics (`lib/lines.ts` + `hooks/useLineLayout.ts`) and slides horizontally so the focused word's ORP character stays pinned to the centre axis for its entire duration. Neighbouring lines are dimmed above/below. `components/reader/LineStage.tsx` |
 
+### Editor
+
+Every owned document opens in a Word-style editor at **`/edit/:slug`**
+(entry points: the library row menu and the reader's ⋯ menu). The canvas
+preserves the original document's formatting — DOCX headings/bold/lists via
+Mammoth's semantic HTML, PDF headings/bold/italic from span metrics,
+Markdown rendered to HTML on upload — and pairs every text block with the
+`words` the RSVP reader consumes. A ribbon toolbar (styles, bold/italic/
+underline, lists, links, figures) sits above the canvas with a live
+**preview pane** side by side on desktop and an Edit/Preview switch on
+phones. Changes **autosave** (debounced ~1s) through
+`PUT /api/documents/:id/content`, which sanitizes HTML, re-tokenizes words
+and replaces `content_blocks`; images insert/replace/delete against the
+private `document-images` bucket with signed URLs.
+
 The mode is stored per device in localStorage (`lib/reader-mode.ts`) — no
 schema change needed. Press `M` (or use the segmented control) to switch.
 
@@ -69,7 +84,7 @@ readio/
 │   └── src/app/               Routes incl. public /demo reader playground
 ├── backend/                   FastAPI document-processing microservice
 │   └── tests/                 Unit tests for extraction, persistence, auth
-├── supabase/migrations/       Schema + RLS + storage + theme defaults
+├── supabase/migrations/       Single consolidated schema (tables + RLS + storage)
 ├── dev.sh                     Runs both apps for local development
 └── .github/                   CI workflows
 ```
@@ -149,6 +164,8 @@ uvicorn main:app --reload --port 8001   # http://localhost:8001/health
    - `20260914090000_content_blocks_owner_write_and_storage_cleanup.sql` — owner insert/update/delete on content_blocks (required for inline text uploads) + delete policy on private documents bucket
    - `20260914100000_storage_path_and_private_images.sql` — `storage_path` / `source_url` columns; private `document-images` + select for document readers (signed URLs)
    - `20260919120000_dark_first_theme_defaults.sql` — dark-first redesign: `theme` defaults to `'dark'` (existing `'light'` rows migrated; users can switch back in Settings), WPM/font factory defaults aligned with the new reader
+   - `20260923120000_white_default_theme.sql` — `reading_preferences.theme` defaults to `'light'` (the single theme the UI renders; older rows keep their stored value)
+   - `20260923140000_content_blocks_html_and_editor_images.sql` — `content_blocks.html` (formatted HTML for the `/edit` editor) + owner INSERT policy on the `document-images` bucket (editor figure uploads). **Required for `/edit/:slug` to autosave with formatting**
    - **CLI (preferred):** `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`
    - **SQL Editor:** run each file in timestamp order
    - Skipping later migrations is the most common cause of uploads ending in **Error**

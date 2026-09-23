@@ -515,6 +515,10 @@ export default function ReaderClient({
       onCancelRename={() => setRenaming(false)}
       onShare={() => openShare("link")}
       onToggleVisibility={() => openShare("visibility")}
+      onEdit={() => {
+        setMenuOpen(false);
+        router.push(`/edit/${doc.slug}`);
+      }}
       onReprocess={() => void handleReprocess()}
       reprocessing={reprocessing}
       onDelete={() => {

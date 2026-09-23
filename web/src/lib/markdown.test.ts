@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   looksLikeMarkdown,
+  markdownToHtml,
   markdownToPlainText,
+  plainTextToHtml,
   prepareReadableText,
 } from "@/lib/markdown";
 
@@ -119,5 +121,104 @@ describe("prepareReadableText", () => {
   it("leaves plain text untouched", () => {
     const plain = "no markup here at all";
     expect(prepareReadableText(plain)).toBe(plain);
+  });
+});
+
+describe("markdownToHtml", () => {
+  it("renders headings and paragraphs", () => {
+    expect(markdownToHtml("# Title\n\nBody text")).toBe(
+      "<h1>Title</h1>\n<p>Body text</p>",
+    );
+    expect(markdownToHtml("### Third")).toBe("<h3>Third</h3>");
+  });
+
+  it("renders emphasis, strike and code", () => {
+    expect(markdownToHtml("a **b** c *d* e ~~f~~ g `h`")).toBe(
+      "<p>a <strong>b</strong> c <em>d</em> e <del>f</del> g <code>h</code></p>",
+    );
+  });
+
+  it("keeps bold markers inside code spans untouched", () => {
+    expect(markdownToHtml("`**not bold**`")).toBe("<p><code>**not bold**</code></p>");
+  });
+
+  it("renders links only for safe URLs", () => {
+    expect(markdownToHtml("[docs](https://x.dev/a)")).toBe(
+      '<p><a href="https://x.dev/a">docs</a></p>',
+    );
+    expect(markdownToHtml("[x](javascript:alert(1))")).toBe("<p>x</p>");
+    expect(markdownToHtml("[x](/library)")).toBe('<p><a href="/library">x</a></p>');
+    expect(markdownToHtml("[x](//evil.dev)")).toBe("<p>x</p>");
+  });
+
+  it("degrades images to alt text like the reader", () => {
+    expect(markdownToHtml("![a cat](cat.png)")).toBe("<p>a cat</p>");
+  });
+
+  it("renders both list flavours", () => {
+    expect(markdownToHtml("- a\n- b")).toBe("<ul><li>a</li><li>b</li></ul>");
+    expect(markdownToHtml("1. a\n2. b")).toBe("<ol><li>a</li><li>b</li></ol>");
+    expect(markdownToHtml("- [x] done")).toBe("<ul><li>done</li></ul>");
+  });
+
+  it("joins lazy continuations into the list item", () => {
+    expect(markdownToHtml("- item\n  continued")).toBe(
+      "<ul><li>item continued</li></ul>",
+    );
+  });
+
+  it("renders blockquotes recursively", () => {
+    expect(markdownToHtml("> quoted **x**")).toBe(
+      "<blockquote><p>quoted <strong>x</strong></p></blockquote>",
+    );
+  });
+
+  it("renders fenced code verbatim and escaped", () => {
+    expect(markdownToHtml("```js\nif (a < b) x;\n```")).toBe(
+      "<pre><code>if (a &lt; b) x;</code></pre>",
+    );
+  });
+
+  it("renders horizontal rules", () => {
+    expect(markdownToHtml("a\n\n---\n\nb")).toBe("<p>a</p>\n<hr>\n<p>b</p>");
+  });
+
+  it("keeps soft line breaks inside a paragraph", () => {
+    expect(markdownToHtml("one\ntwo")).toBe("<p>one<br>\ntwo</p>");
+  });
+
+  it("escapes raw HTML in the source", () => {
+    expect(markdownToHtml("<script>evil()</script>")).toBe(
+      "<p>&lt;script&gt;evil()&lt;/script&gt;</p>",
+    );
+  });
+
+  it("flattens tables the same way the reader does", () => {
+    const out = markdownToHtml("| a | b |\n|---|---|\n| 1 | 2 |");
+    expect(out).toBe("<p>a, b</p>\n<p>1, 2</p>");
+  });
+
+  it("drops link definitions", () => {
+    expect(markdownToHtml("[ref]: https://x.test\n\nbody")).toBe("<p>body</p>");
+  });
+});
+
+describe("plainTextToHtml", () => {
+  it("wraps paragraphs and escapes markup", () => {
+    expect(plainTextToHtml("a <b>\n\nsecond")).toBe(
+      "<p>a &lt;b&gt;</p>\n<p>second</p>",
+    );
+  });
+
+  it("turns single newlines into breaks", () => {
+    expect(plainTextToHtml("one\ntwo")).toBe("<p>one<br>\ntwo</p>");
+  });
+
+  it("ignores blank runs", () => {
+    expect(plainTextToHtml("  a  \n\n\n\n b ")).toBe("<p>a</p>\n<p>b</p>");
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(plainTextToHtml("   \n  ")).toBe("");
   });
 });

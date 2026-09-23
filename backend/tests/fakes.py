@@ -61,12 +61,16 @@ class FakeQuery:
     # --- terminal call --------------------------------------------------
     def execute(self) -> _Result:
         if self._pending is not None and self._pending.name == "insert":
-            if self.table == "content_blocks" and self._owner.fail_first_content_insert:
-                self._owner.fail_first_content_insert = False
-                self._owner.content_inserts += 1
-                raise RuntimeError('column "needs_ocr" does not exist')
             if self.table == "content_blocks":
                 self._owner.content_inserts += 1
+                payload = self._pending.payload or []
+                first = payload[0] if payload else {}
+                clash = self._owner.missing_columns & set(first)
+                if clash:
+                    # `html` is the newest column — it fails first when the
+                    # schema lacks it, otherwise report the other gap.
+                    column = "html" if "html" in clash else sorted(clash)[0]
+                    raise RuntimeError(f'column "{column}" does not exist')
 
         if self.table == "documents":
             return _Result(data=[{"id": "doc"}] if self._owner.document_exists else [])
@@ -78,7 +82,8 @@ class FakeSupabase:
     """Stand-in for `supabase.Client` recording every operation."""
 
     document_exists: bool = True
-    fail_first_content_insert: bool = False
+    #: Columns the fake schema lacks — inserts carrying them raise.
+    missing_columns: set[str] = field(default_factory=set)
     ops: list[Operation] = field(default_factory=list)
     selects: list[tuple] = field(default_factory=list)
     content_inserts: int = 0
