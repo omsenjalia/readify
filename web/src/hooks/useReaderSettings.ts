@@ -2,17 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  DEFAULT_THEME,
   FONT_DEFAULT_DESKTOP,
   FONT_DEFAULT_MOBILE,
   FONT_MAX,
   FONT_MIN,
   SMALL_VIEWPORT_QUERY,
-  THEMES,
   WPM_MAX,
   WPM_MIN,
   type ReaderPrefs,
-  type Theme,
 } from "@/lib/constants";
 import { savePreferences } from "@/lib/preferences";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -22,20 +19,6 @@ const SAVE_DEBOUNCE_MS = 500;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-function asTheme(value: string | null | undefined): Theme {
-  return THEMES.includes(value as Theme) ? (value as Theme) : DEFAULT_THEME;
-}
-
-/**
- * Dark is the baseline (no class on <html>); light/sepia are opt-in classes.
- * Shared with the settings page so the two can never drift.
- */
-export function applyThemeClass(theme: Theme): void {
-  const root = document.documentElement;
-  root.classList.remove("dark", "light", "sepia");
-  if (theme !== "dark") root.classList.add(theme);
 }
 
 export interface UseReaderSettingsOptions {
@@ -55,9 +38,6 @@ export interface ReaderSettings {
   fontSize: number;
   setFontSize: (value: number) => void;
 
-  theme: Theme;
-  setTheme: (value: Theme) => void;
-
   showProgressBar: boolean;
   setShowProgressBar: (value: boolean) => void;
 
@@ -69,7 +49,7 @@ export interface ReaderSettings {
 }
 
 /**
- * Reader-scoped presentation settings: speed, font size, theme and the three
+ * Reader-scoped presentation settings: speed, font size and the three
  * display toggles.
  *
  * Extracted from `Reader.tsx`, which held eight `useState` atoms and a
@@ -89,7 +69,6 @@ export function useReaderSettings({
     clamp(initialWpm ?? WPM_MAX, WPM_MIN, WPM_MAX),
   );
   const [fontOverride, setFontOverride] = useState<number | null>(null);
-  const [theme, setTheme] = useState<Theme>(() => asTheme(preferences?.theme));
   const [showProgressBar, setShowProgressBar] = useState(
     preferences?.show_progress_bar ?? true,
   );
@@ -121,12 +100,6 @@ export function useReaderSettings({
     setFontOverride(clamp(value, FONT_MIN, FONT_MAX));
   }, []);
 
-  /* ---------------- theme ---------------- */
-
-  useEffect(() => {
-    applyThemeClass(theme);
-  }, [theme]);
-
   /* ---------------- persistence ---------------- */
 
   const userIdRef = useRef(userId);
@@ -142,7 +115,6 @@ export function useReaderSettings({
       void savePreferences(owner, {
         default_wpm: wpm,
         font_size: fontSize,
-        theme,
         show_progress_bar: showProgressBar,
         highlight_orp: highlightOrp,
         auto_pause_images: autoPauseImages,
@@ -153,7 +125,6 @@ export function useReaderSettings({
   }, [
     wpm,
     fontSize,
-    theme,
     showProgressBar,
     highlightOrp,
     autoPauseImages,
@@ -165,8 +136,6 @@ export function useReaderSettings({
     adjustWpm,
     fontSize,
     setFontSize,
-    theme,
-    setTheme,
     showProgressBar,
     setShowProgressBar,
     highlightOrp,

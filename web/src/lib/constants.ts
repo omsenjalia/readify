@@ -23,20 +23,18 @@ export const IMAGE_BUCKET = "document-images";
 export const PREFERENCE_DEFAULTS = {
   default_wpm: 600,
   font_size: 44,
-  theme: "dark",
+  theme: "light",
   show_progress_bar: true,
   highlight_orp: true,
   auto_pause_images: true,
 } as const;
 
 /**
- * Dark is the baseline theme (no class on <html>); `light` and `sepia` are
- * opt-in overrides applied via a class. Listed dark-first so theme pickers
- * show the default first.
+ * The app is single-theme: white. The `theme` column still exists in the
+ * database (older rows may hold "dark"/"sepia") but nothing renders a
+ * different theme, and the preferences API only accepts "light".
  */
-export type Theme = "dark" | "light" | "sepia";
-export const THEMES: readonly Theme[] = ["dark", "light", "sepia"];
-export const DEFAULT_THEME: Theme = "dark";
+export const THEMES: readonly string[] = ["light"];
 
 /** Minimal shape the reader needs; kept structural so it accepts rows. */
 export interface ReaderPrefs {

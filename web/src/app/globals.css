@@ -1,61 +1,18 @@
 @import "tailwindcss";
 
 /*
-  ReadIO design system — dark-first, green-tinted.
+  Readio design system — white-first, green-tinted.
 
-  The baseline (`:root`) is the dark theme; `.light` and `.sepia` opt out of
-  it. That flips the old model (light baseline + `.dark` class) so the
-  marketing site, the auth pages and every signed-out reader get the
-  signature look without any theme plumbing, while signed-in users can still
-  pick Light or Sepia for long sessions.
+  The baseline (`:root`) is the white theme: near-white ground, near-black
+  ink, hairline green-tinted rules. Single theme — the app is always white;
+  there is no dark or sepia mode.
 
-  Accent: emerald. On dark it is mint-bright (#34d399); on light it deepens
-  (#059669) so body-text contrast stays accessible.
+  Accent: emerald green (#059669) for CTAs, links, pills and highlights.
+  The ORP pivot letter is deliberately a separate, high-signal red
+  (#dc2626) so the reading focus point reads at a glance.
 */
 
 :root {
-  /* ---- dark (default) ---- */
-  --background: #060a08;
-  --foreground: #eaf3ec;
-
-  --color-bg: #060a08;
-  --color-bg-elevated: #0b120e;
-  --color-surface: #0e1712;
-  --color-surface-soft: #14201a;
-  --color-ink: #eaf3ec;
-  --color-muted: #9db0a3;
-  --color-subtle: #647a6b;
-  --color-line: #1b2a21;
-  --color-line-strong: #2b4033;
-
-  --color-accent: #34d399;
-  --color-accent-strong: #10b981;
-  --color-accent-deep: #047857;
-  --color-accent-soft: rgba(52, 211, 153, 0.12);
-  --color-accent-text: #6ee7b7;
-  --color-on-accent: #04150d;
-
-  --color-orp: #34d399;
-  --color-progress: #34d399;
-  --color-danger: #f87171;
-  --color-danger-soft: rgba(248, 113, 113, 0.12);
-
-  /* High-contrast "paper" pill: near-white on dark, near-black on light. */
-  --color-paper: #eef7f0;
-  --color-ink-inv: #0a120d;
-
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.35);
-  --shadow-glow: 0 0 48px rgba(52, 211, 153, 0.14);
-  --glow-radial: radial-gradient(
-    50% 50% at 50% 40%,
-    rgba(52, 211, 153, 0.09) 0%,
-    rgba(52, 211, 153, 0) 100%
-  );
-
-  color-scheme: dark;
-}
-
-.light {
   --background: #f4f8f4;
   --foreground: #101a13;
 
@@ -65,22 +22,24 @@
   --color-surface-soft: #ecf2ec;
   --color-ink: #101a13;
   --color-muted: #55665a;
-  --color-subtle: #83968a;
+  --color-subtle: #5f7265;
   --color-line: #dce7dd;
   --color-line-strong: #c2d3c5;
 
-  --color-accent: #059669;
-  --color-accent-strong: #047857;
-  --color-accent-deep: #065f46;
+  --color-accent: #047857;
+  --color-accent-strong: #065f46;
+  --color-accent-deep: #054d3b;
   --color-accent-soft: rgba(5, 150, 105, 0.1);
   --color-accent-text: #047857;
   --color-on-accent: #ffffff;
 
-  --color-orp: #059669;
+  /* ORP pivot letter — red, by design (not the green accent). */
+  --color-orp: #dc2626;
   --color-progress: #059669;
   --color-danger: #dc2626;
   --color-danger-soft: rgba(220, 38, 38, 0.08);
 
+  /* High-contrast "paper" pill: near-black on the white ground. */
   --color-paper: #12241a;
   --color-ink-inv: #f4f8f4;
 
@@ -95,45 +54,6 @@
   color-scheme: light;
 }
 
-.sepia {
-  --background: #f2e9d6;
-  --foreground: #33291a;
-
-  --color-bg: #f2e9d6;
-  --color-bg-elevated: #f9f1df;
-  --color-surface: #f9f1df;
-  --color-surface-soft: #efe4cb;
-  --color-ink: #33291a;
-  --color-muted: #7d6f55;
-  --color-subtle: #a08f6e;
-  --color-line: #e2d4b4;
-  --color-line-strong: #d0bd94;
-
-  --color-accent: #4c7c3f;
-  --color-accent-strong: #3d6733;
-  --color-accent-deep: #2f5227;
-  --color-accent-soft: rgba(76, 124, 63, 0.12);
-  --color-accent-text: #3d6733;
-  --color-on-accent: #fbf6e9;
-
-  --color-orp: #4c7c3f;
-  --color-progress: #4c7c3f;
-  --color-danger: #b3402e;
-  --color-danger-soft: rgba(179, 64, 46, 0.1);
-
-  --color-paper: #2c2415;
-  --color-ink-inv: #f6eeda;
-
-  --shadow-card: 0 1px 2px rgb(51 41 26 / 0.06), 0 10px 28px rgb(51 41 26 / 0.09);
-  --shadow-glow: 0 0 48px rgba(76, 124, 63, 0.12);
-  --glow-radial: radial-gradient(
-    50% 50% at 50% 40%,
-    rgba(76, 124, 63, 0.08) 0%,
-    rgba(76, 124, 63, 0) 100%
-  );
-
-  color-scheme: light;
-}
 
 @theme inline {
   --color-background: var(--background);
@@ -281,17 +201,9 @@ body {
 .btn-primary {
   background: var(--color-accent);
   color: var(--color-on-accent);
-  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.28);
-}
-.btn-primary:hover {
-  background: var(--color-accent-text);
-}
-.light .btn-primary,
-.sepia .btn-primary {
   box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
 }
-.light .btn-primary:hover,
-.sepia .btn-primary:hover {
+.btn-primary:hover {
   background: var(--color-accent-strong);
   color: var(--color-on-accent);
 }
@@ -522,17 +434,6 @@ body {
   animation: pulse-soft 1.6s ease-in-out infinite;
 }
 
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes float-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-.animate-float {
-  animation: float-y 7s ease-in-out infinite;
-}
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -540,7 +441,6 @@ body {
   }
   .animate-marquee,
   .animate-pulse-soft,
-  .animate-float,
   .reveal.reveal-in,
   .word-swap-in,
   .line-enter-forward,
@@ -560,6 +460,3 @@ body {
 .sheet-in {
   animation: sheet-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
-
-/* Opt-in variant for the light/sepia themes (baseline is dark). */
-@custom-variant light (&:where(.light, .light *));

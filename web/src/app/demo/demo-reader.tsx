@@ -13,13 +13,13 @@ page they jump five to seven times per line, pause, refocus, and drift back to
 re-read words you already saw. Those jumps, called saccades, burn time and
 attention without adding a single word of comprehension.
 
-ReadIO removes the movement entirely. Instead of asking you to scan a page,
+Readio removes the movement entirely. Instead of asking you to scan a page,
 it brings the text to one fixed point on your screen. In Line Flow mode the
 whole line stays visible for context, sliding smoothly sideways so the key
 character of each word, the Optimal Recognition Point, arrives exactly where
 your gaze is already resting.
 
-That green pivot never moves. Your eyes never move. Only the sentence does.
+That red pivot never moves. Your eyes never move. Only the sentence does.
 
 The result feels less like reading and more like listening: a steady rhythm
 of meaning arriving at the speed you choose, from a calm two hundred words
@@ -29,7 +29,7 @@ Formulas get extra time. Your place is saved to the word, on every device.
 Everything you are experiencing right now is the real reader. Switch to the
 one-word mode below, change the speed, resize the window, or open this page
 on your phone and try the swipe gestures. When you are ready, sign up free
-and point ReadIO at your own PDFs, documents, notes, and YouTube transcripts.
+and point Readio at your own PDFs, documents, notes, and YouTube transcripts.
 `;
 
 const DEMO_DOC = {

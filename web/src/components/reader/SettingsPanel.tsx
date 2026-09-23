@@ -7,23 +7,15 @@ import {
   FONT_MAX,
   FONT_MIN,
   FONT_STEP,
-  THEMES,
   WPM_MAX,
   WPM_MIN,
   WPM_STEP,
-  type Theme,
 } from "@/lib/constants";
 import type { ReaderSettings } from "@/hooks/useReaderSettings";
 import SliderRow from "@/components/reader/SliderRow";
 
-const THEME_LABELS: Record<Theme, string> = {
-  dark: "Dark",
-  light: "Light",
-  sepia: "Sepia",
-};
-
 /**
- * Speed / font / theme / toggle controls.
+ * Speed / font / toggle controls.
  *
  * Rendered in two places (the desktop popover and the mobile bottom sheet);
  * keeping it one component means the two can never drift.
@@ -58,32 +50,6 @@ export default function SettingsPanel({
         value={settings.fontSize}
         onChange={settings.setFontSize}
       />
-
-      <div>
-        <div className="mb-2 text-xs font-medium text-muted">Theme</div>
-        <div className="grid grid-cols-3 gap-1.5">
-          {THEMES.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                settings.setTheme(id);
-                toast.success(`${THEME_LABELS[id]} theme`, {
-                  id: "reader-theme",
-                });
-              }}
-              className={clsx(
-                "rounded-xl border px-3 py-2 text-xs font-semibold transition",
-                settings.theme === id
-                  ? "border-accent bg-accent-soft text-accent"
-                  : "border-line text-muted hover:border-line-strong hover:text-ink",
-              )}
-            >
-              {THEME_LABELS[id]}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="space-y-3">
         <SettingRow

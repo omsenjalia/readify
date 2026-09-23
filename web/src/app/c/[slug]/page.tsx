@@ -22,11 +22,11 @@ export async function generateMetadata({
   if (!doc || doc.visibility !== "public") return {};
 
   return {
-    title: `${doc.title} — ReadIO`,
+    title: doc.title,
     description: `Speed read "${doc.title}" — ${doc.word_count.toLocaleString()} words`,
     openGraph: {
       title: doc.title,
-      description: `${doc.word_count.toLocaleString()} words · Read faster with ReadIO`,
+      description: `${doc.word_count.toLocaleString()} words · Read faster with Readio`,
       url: `https://readio.app/c/${doc.slug}`,
     },
   };

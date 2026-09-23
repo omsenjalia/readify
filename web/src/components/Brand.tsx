@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
 /**
- * The ReadIO mark: three text lines with the green pivot dot on the centre
+ * The Read/IO mark: three text lines with the accent pivot dot on the centre
  * line — Line Flow reduced to a glyph. The eye (dot) never moves; the lines
  * do. The wordmark is spelled Read/IO.
  */

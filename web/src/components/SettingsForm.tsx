@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import clsx from "clsx";
 import { KeyRound, LogOut, Type } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReadingPreferences } from "@/types";
@@ -11,24 +10,12 @@ import {
   FONT_MAX,
   FONT_MIN,
   FONT_STEP,
-  THEMES,
   WPM_MAX,
   WPM_MIN,
   WPM_STEP,
-  type Theme,
 } from "@/lib/constants";
 import { updatePreferences } from "@/lib/preferences-api";
-import { applyThemeClass } from "@/hooks/useReaderSettings";
 import { SettingRow } from "@/components/reader/SettingsPanel";
-
-const THEME_LABELS: Record<Theme, string> = {
-  dark: "Dark",
-  light: "Light",
-  sepia: "Sepia",
-};
-
-/** Single source of truth: the theme list comes from shared constants. */
-const THEME_OPTIONS = THEMES.map((id) => ({ id, label: THEME_LABELS[id] }));
 
 export default function SettingsForm({
   preferences,
@@ -39,11 +26,6 @@ export default function SettingsForm({
 }) {
   const [wpm, setWpm] = useState(preferences.default_wpm);
   const [fontSize, setFontSize] = useState(preferences.font_size);
-  const [theme, setTheme] = useState<Theme>(
-    THEMES.includes(preferences.theme as Theme)
-      ? (preferences.theme as Theme)
-      : "dark",
-  );
   const [showProgressBar, setShowProgressBar] = useState(
     preferences.show_progress_bar,
   );
@@ -59,11 +41,6 @@ export default function SettingsForm({
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Apply theme live so Settings mirrors the Reader.
-  useEffect(() => {
-    applyThemeClass(theme);
-  }, [theme]);
 
   useEffect(
     () => () => {
@@ -195,33 +172,6 @@ export default function SettingsForm({
             <div className="mt-1.5 flex justify-between text-[10px] font-medium text-subtle tabular-nums">
               <span>{FONT_MIN}</span>
               <span>{FONT_MAX}</span>
-            </div>
-          </div>
-
-          {/* Theme */}
-          <div>
-            <div className="mb-2.5 text-sm font-semibold text-ink">Theme</div>
-            <div className="grid grid-cols-3 gap-2">
-              {THEME_OPTIONS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    setTheme(t.id);
-                    queueSave({ theme: t.id });
-                  }}
-                  className={clsx(
-                    "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
-                    theme === t.id
-                      ? "border-accent bg-accent-soft text-accent"
-                      : "border-line text-muted hover:border-line-strong hover:text-ink",
-                  )}
-                  aria-pressed={theme === t.id}
-                >
-                  <ThemeSwatch id={t.id} />
-                  {t.label}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -374,24 +324,5 @@ export default function SettingsForm({
         </div>
       </section>
     </div>
-  );
-}
-
-/** A tiny two-tone preview of each theme. */
-function ThemeSwatch({ id }: { id: Theme }) {
-  const palette: Record<Theme, [string, string]> = {
-    dark: ["#0b120e", "#34d399"],
-    light: ["#ffffff", "#059669"],
-    sepia: ["#f9f1df", "#4c7c3f"],
-  };
-  const [bg, dot] = palette[id];
-  return (
-    <span
-      className="flex h-4 w-6 shrink-0 items-center justify-center rounded-[5px] border border-line-strong"
-      style={{ background: bg }}
-      aria-hidden="true"
-    >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
-    </span>
   );
 }

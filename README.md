@@ -1,19 +1,22 @@
-# ReadIO
+# Read/IO
 
-Speed reader with **Line Flow** — the whole line slides beneath a single fixed
-focus point while the ORP (Optimal Recognition Point) character of each word
-lands exactly where your eye is already resting. Your eyes never move; the
-text does. A classic one-word RSVP mode is built in too.
+Readio — a speed reader with **Line Flow**: the whole line slides beneath a
+single fixed focus point while the ORP (Optimal Recognition Point) character
+of each word lands exactly where your eye is already resting. Your eyes never
+move; the text does. A classic one-word RSVP mode is built in too.
 
 Upload a document, get a shareable link, and read at up to 800 WPM.
 
 ## Design
 
-Dark-first, green-toned UI (emerald on near-black) with a full token system
-in `web/src/app/globals.css`:
+White-first, green-toned UI with a full token system in
+`web/src/app/globals.css`:
 
-- `:root` — dark (the baseline; marketing, auth and the default app theme)
-- `.light` / `.sepia` — opt-in reading themes, switchable per user
+- `:root` — the single (white) theme: near-white ground, near-black ink,
+  hairline green-tinted rules. There is no dark or sepia mode.
+- Accent: emerald green for CTAs, links, pills and highlights
+- **ORP pivot letter: red** (`--color-orp`, `#dc2626`) — a deliberate second
+  colour so the reading focus point reads at a glance
 - Shared primitives: `.btn-primary|outline|ghost|paper`, `.card`, `.pill`,
   `.input`, `.range-accent`, focus glows and scroll-reveal animations
 - Mobile-first everywhere: bottom tab nav with a centre upload button,

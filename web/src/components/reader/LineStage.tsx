@@ -23,7 +23,7 @@ import {
  * Classic RSVP flashes a single word; Line Flow shows the *entire current
  * line* as a horizontal strip and slides it so the focused word stays at the
  * stage's centre axis. The line advances under a perfectly still eye: context
- * comes from the periphery, precision from the fixed green pivot. The pivot
+ * comes from the periphery, precision from the fixed red pivot. The pivot
  * is held for the whole word rather than jumping to each word's ORP character.
  *
  * Positioning is measured, not guessed: after each render a layout effect
