@@ -71,7 +71,7 @@ green deepened `#059669 → #047857` (both near-indistinguishable, both now
 
 ## Reader polish (follow-up on the same branch)
 
-Three user-requested reader fixes, all shipped on this branch:
+User-requested reader fixes, all shipped on this branch:
 
 1. **Zero eye travel in Line Flow** — root cause: the strip aligned the
    *word centre* to the axis, so the red ORP character (the designated
@@ -91,6 +91,15 @@ Three user-requested reader fixes, all shipped on this branch:
    reordered with One word primary and Line Flow secondary. Devices with
    a saved mode keep it (localStorage), so the flip only affects fresh
    visitors.
+4. **Mobile transport centred** — the mobile-only settings button sat
+   left of the play button, leaving 3 buttons on the left and 1 on the
+   right, so the play button sat 50px right of the screen centre
+   (measured: play centre 237.5px on a 375px viewport). It is now
+   `order-last` on small screens: `[reset][back] · play ·
+   [next][settings]` — play measured at exactly the viewport centre
+   (off-centre 0.0px). Desktop is unaffected (that button is
+   `md:hidden`; with 5 side buttons the best desktop balance is the
+   current −28px, improved from −56px before the reset button landed).
 
 All gates re-run after these changes: production build 15/15, 123/123
 tests, eslint 0, CLS 0.0000 on every page × width, no console/hydration

@@ -112,11 +112,17 @@ export default function ReaderControls({
 
       {/* Transport row */}
       <div className="flex items-center justify-center gap-1.5 sm:gap-3">
+        {/* Mobile-only settings. `order-last` moves it to the right edge on
+          small screens so the transport row stays symmetric around the play
+          button ([reset][back] · play · [next][settings]) instead of the
+          play button sitting off-centre. On md+ this button is hidden and
+          the desktop settings popover takes its place, so desktop balance
+          (3 buttons each side) is unaffected. */}
         <button
           type="button"
           onClick={() => setOpenPanel("settings")}
           aria-label="Reading settings"
-          className={clsx(iconButton, "md:hidden")}
+          className={clsx(iconButton, "order-last md:hidden")}
         >
           <Settings className="h-5 w-5" />
         </button>
