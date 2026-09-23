@@ -26,10 +26,12 @@ of meaning arriving at the speed you choose, from a calm two hundred words
 per minute up to a sprinting eight hundred. Figures pause themselves.
 Formulas get extra time. Your place is saved to the word, on every device.
 
-Everything you are experiencing right now is the real reader. Switch to the
-one-word mode below, change the speed, resize the window, or open this page
-on your phone and try the swipe gestures. When you are ready, sign up free
-and point Readio at your own PDFs, documents, notes, and YouTube transcripts.
+You are reading this in one-word mode. Switch to Line Flow and the whole
+line slides under that same fixed point. Everything you are experiencing
+right now is the real reader — change the speed, resize the window, or open
+this page on your phone and try the swipe gestures. When you are ready, sign
+up free and point Readio at your own PDFs, documents, notes, and YouTube
+transcripts.
 `;
 
 const DEMO_DOC = {

@@ -69,11 +69,42 @@ green deepened `#059669 → #047857` (both near-indistinguishable, both now
 | Dead CSS | ✅ none |
 | Branding grep | ✅ 0 `ReadIO`, 0 legacy dark-theme hexes |
 
+## Reader polish (follow-up on the same branch)
+
+Three user-requested reader fixes, all shipped on this branch:
+
+1. **Zero eye travel in Line Flow** — root cause: the strip aligned the
+   *word centre* to the axis, so the red ORP character (the designated
+   fixation point) sat off-axis by a per-word ORP offset. Fix
+   (`reader/LineStage.tsx`): the alignment pivot is now the ORP character
+   element itself, so the red letter lands on the exact same pixel for
+   every word; formula tokens (no ORP split) fall back to the word
+   centre. Measured headless across 13 consecutive words: ORP letter
+   centre within **0.48px** of the axis on every word (subpixel,
+   `offsetLeft` integer rounding) — previously the letter moved a full
+   ORP offset (2–15px) between words.
+2. **Reset control** — new "Back to the beginning" button
+   (`RotateCcw`, `reader/ReaderControls.tsx`), wired to the engine's
+   `seek(0)` in `Reader.tsx` with a toast; verified to return to word 1.
+3. **One word = default mode** — `DEFAULT_READING_MODE` flipped
+   `"line" → "word"` (`lib/constants.ts`); the segmented control was
+   reordered with One word primary and Line Flow secondary. Devices with
+   a saved mode keep it (localStorage), so the flip only affects fresh
+   visitors.
+
+All gates re-run after these changes: production build 15/15, 123/123
+tests, eslint 0, CLS 0.0000 on every page × width, no console/hydration
+errors.
+
 ## Screenshots
 
 - `before-home-1440-full.png` / `before-login-1440.png` — the reverted-to
   Paper state (previous PR revision)
-- `after-home-1440-full.png` / `after-home-375.png` — restored original
+- `after-home-1440-full.png` / `after-home-375.png` /
+  `after-home-768.png` / `after-home-1280.png` — restored original
   UI/UX on white
-- `after-demo-1440.png` — the original reader with the **red ORP pivot**
-- `after-login-1440.png` — original auth on white
+- `after-demo-1440.png` — reader default: **One word** mode, red ORP
+  pivot, reset control in the transport row
+- `after-demo-lineflow-1440.png` — Line Flow with the red ORP character
+  pinned to the centre axis (zero eye travel)
+- `after-login-1440.png` / `after-login-375.png` — original auth on white

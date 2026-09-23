@@ -4,6 +4,7 @@ import {
   Gauge,
   Pause,
   Play,
+  RotateCcw,
   Rows3,
   Settings,
   SkipBack,
@@ -42,6 +43,7 @@ export default function ReaderControls({
   setOpenPanel,
   onStep,
   onTogglePlay,
+  onReset,
 }: {
   settings: ReaderSettings;
   playing: boolean;
@@ -51,6 +53,7 @@ export default function ReaderControls({
   setOpenPanel: (panel: ReaderPanel | null) => void;
   onStep: (delta: number) => void;
   onTogglePlay: () => void;
+  onReset: () => void;
 }) {
   const panelToggle = (panel: ReaderPanel) => () =>
     setOpenPanel(openPanel === panel ? null : panel);
@@ -116,6 +119,16 @@ export default function ReaderControls({
           className={clsx(iconButton, "md:hidden")}
         >
           <Settings className="h-5 w-5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onReset}
+          aria-label="Back to the beginning"
+          title="Back to the beginning"
+          className={iconButton}
+        >
+          <RotateCcw className="h-5 w-5" />
         </button>
 
         <button
@@ -213,7 +226,8 @@ export default function ReaderControls({
   );
 }
 
-/** Line Flow vs single word — the reader's two display modes. */
+/** One word vs Line Flow — the reader's two display modes.
+ * One word is the default; Line Flow is the secondary mode. */
 export function ModeSegmented({
   mode,
   onChange,
@@ -228,18 +242,18 @@ export function ModeSegmented({
       aria-label="Reading mode"
     >
       <ModeOption
-        active={mode === "line"}
-        onClick={() => onChange("line")}
-        label="Line Flow"
-        short="Line"
-        icon={<Rows3 className="h-3.5 w-3.5" />}
-      />
-      <ModeOption
         active={mode === "word"}
         onClick={() => onChange("word")}
         label="One word"
         short="Word"
         icon={<Type className="h-3.5 w-3.5" />}
+      />
+      <ModeOption
+        active={mode === "line"}
+        onClick={() => onChange("line")}
+        label="Line Flow"
+        short="Line"
+        icon={<Rows3 className="h-3.5 w-3.5" />}
       />
     </div>
   );

@@ -21,10 +21,10 @@ import {
  * Line Flow — the whole line, one fixation.
  *
  * Classic RSVP flashes a single word; Line Flow shows the *entire current
- * line* as a horizontal strip and slides it so the focused word stays at the
- * stage's centre axis. The line advances under a perfectly still eye: context
- * comes from the periphery, precision from the fixed red pivot. The pivot
- * is held for the whole word rather than jumping to each word's ORP character.
+ * line* as a horizontal strip and slides it so the focused word's ORP
+ * character — the red pivot letter — lands exactly on the stage's centre
+ * axis. The line advances under a perfectly still eye: context comes from
+ * the periphery, and the fixation point never moves between words.
  *
  * Positioning is measured, not guessed: after each render a layout effect
  * reads the focused word's real offset and writes the strip transform before
@@ -185,10 +185,12 @@ export default function LineStage({
     const lineWrap = lineWrapRef.current;
     if (!strip || !lineWrap || !isLineRow) return;
 
-    // Align the whole current word, not its ORP character. This means the
-    // focus point stays fixed for the entire word; advancing to another word
-    // is the only time the strip needs to move.
-    const target = wordEls.current[index];
+    // Pin the focused word's ORP character — the red pivot letter — exactly
+    // on the centre axis. Measuring the ORP letter (not the word centre) is
+    // what makes the fixation point land on the same pixel for every word:
+    // zero eye travel, while the rest of the word shifts around it.
+    // Words without an ORP split (formulas) fall back to the word centre.
+    const target = orpEls.current[index] ?? wordEls.current[index];
     if (!target) return;
 
     // offsetLeft is measured against the strip (the nearest positioned

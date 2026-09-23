@@ -635,6 +635,10 @@ export default function ReaderClient({
           setOpenPanel={setOpenPanel}
           onStep={step}
           onTogglePlay={togglePlay}
+          onReset={() => {
+            seek(0);
+            toast.success("Back to the beginning", { id: "reader-reset" });
+          }}
         />
 
         {!isFullscreen && (

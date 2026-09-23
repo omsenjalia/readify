@@ -61,7 +61,7 @@ export interface ReaderPrefs {
  */
 export type ReadingMode = "line" | "word";
 export const READING_MODES: readonly ReadingMode[] = ["line", "word"];
-export const DEFAULT_READING_MODE: ReadingMode = "line";
+export const DEFAULT_READING_MODE: ReadingMode = "word";
 
 /**
  * Line Flow packs words into display lines up to this fraction of the stage
