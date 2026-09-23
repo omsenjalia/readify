@@ -5,7 +5,6 @@ import Link from "next/link";
 import clsx from "clsx";
 import { Menu, X } from "lucide-react";
 import Brand from "@/components/Brand";
-import ScrollProgress from "@/components/landing/ScrollProgress";
 
 const LINKS = [
   { href: "#features", label: "Features" },
@@ -15,9 +14,8 @@ const LINKS = [
 ];
 
 /**
- * Sticky marketing nav: paper backdrop with a hairline that appears on
- * scroll, mono link labels, and the ink CTA pill. Collapses to a sheet
- * menu on phones.
+ * Sticky marketing nav: blur backdrop, anchor links, and the green CTA pill.
+ * Collapses to a sheet menu on phones.
  */
 export default function SiteNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -35,13 +33,12 @@ export default function SiteNav() {
       className={clsx(
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         scrolled
-          ? "border-b border-line bg-bg/85 backdrop-blur-xl"
+          ? "border-b border-line bg-bg/80 backdrop-blur-xl"
           : "border-b border-transparent",
       )}
     >
-      <ScrollProgress />
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-        <Link href="/" aria-label="Read/IO home">
+        <Link href="/" aria-label="ReadIO home">
           <Brand size="sm" />
         </Link>
 
@@ -50,7 +47,7 @@ export default function SiteNav() {
             <Link
               key={link.href}
               href={link.href}
-              className="mono rounded-full px-4 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted transition hover:text-ink"
+              className="rounded-full px-4 py-2 text-sm font-medium text-muted transition hover:text-ink"
             >
               {link.label}
             </Link>
@@ -78,11 +75,7 @@ export default function SiteNav() {
             aria-expanded={open}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink"
           >
-            {open ? (
-              <X className="h-4.5 w-4.5" />
-            ) : (
-              <Menu className="h-4.5 w-4.5" />
-            )}
+            {open ? <X className="h-4.5 w-4.5" /> : <Menu className="h-4.5 w-4.5" />}
           </button>
         </div>
       </nav>

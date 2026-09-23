@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
 /**
- * The Read/IO mark: three text lines with the accent pivot dot on the centre
+ * The ReadIO mark: three text lines with the green pivot dot on the centre
  * line — Line Flow reduced to a glyph. The eye (dot) never moves; the lines
  * do. The wordmark is spelled Read/IO.
  */
@@ -43,17 +43,17 @@ export default function Brand({
         />
         <path
           d="M6 8.5h12"
-          stroke="var(--color-ink)"
+          stroke="var(--color-muted)"
           strokeWidth="1.7"
           strokeLinecap="round"
-          opacity="0.35"
+          opacity="0.55"
         />
         <path
           d="M6 15.5h12"
-          stroke="var(--color-ink)"
+          stroke="var(--color-muted)"
           strokeWidth="1.7"
           strokeLinecap="round"
-          opacity="0.35"
+          opacity="0.55"
         />
         <path
           d="M6 12h9"

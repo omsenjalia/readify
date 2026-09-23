@@ -21,7 +21,7 @@ export default function ConfirmDeleteDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-ink/60 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         onClick={onCancel}
         aria-hidden="true"
       />
@@ -50,7 +50,7 @@ export default function ConfirmDeleteDialog({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="btn btn-md !bg-[var(--color-danger)] !text-ink-inv !shadow-none hover:!opacity-90 disabled:opacity-60"
+            className="btn btn-md !bg-[var(--color-danger)] !text-white !shadow-none hover:!opacity-90 disabled:opacity-60"
           >
             {deleting ? "Deleting…" : "Delete"}
           </button>

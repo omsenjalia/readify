@@ -1,4 +1,4 @@
-"""Readio document-processing service.
+"""ReadIO document-processing service.
 
 FastAPI app that turns uploaded PDFs/DOCX, YouTube links and pasted text into
 RSVP-ready `content_blocks`. Deployed on Railway with the repo's `backend/`
@@ -41,7 +41,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Readio Backend", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="ReadIO Backend", version="0.1.0", lifespan=lifespan)
 
 app.include_router(process_router.router, prefix="/api")
 

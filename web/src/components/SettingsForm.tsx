@@ -8,11 +8,10 @@ import { KeyRound, LogOut, Type } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReadingPreferences } from "@/types";
 import {
-    DEFAULT_THEME,
-    FONT_MAX,
-    FONT_MIN,
-    FONT_STEP,
-    THEMES,
+  FONT_MAX,
+  FONT_MIN,
+  FONT_STEP,
+  THEMES,
   WPM_MAX,
   WPM_MIN,
   WPM_STEP,
@@ -23,8 +22,8 @@ import { applyThemeClass } from "@/hooks/useReaderSettings";
 import { SettingRow } from "@/components/reader/SettingsPanel";
 
 const THEME_LABELS: Record<Theme, string> = {
-  light: "Paper",
-  dark: "Ink",
+  dark: "Dark",
+  light: "Light",
   sepia: "Sepia",
 };
 
@@ -43,7 +42,7 @@ export default function SettingsForm({
   const [theme, setTheme] = useState<Theme>(
     THEMES.includes(preferences.theme as Theme)
       ? (preferences.theme as Theme)
-      : DEFAULT_THEME,
+      : "dark",
   );
   const [showProgressBar, setShowProgressBar] = useState(
     preferences.show_progress_bar,
@@ -381,9 +380,9 @@ export default function SettingsForm({
 /** A tiny two-tone preview of each theme. */
 function ThemeSwatch({ id }: { id: Theme }) {
   const palette: Record<Theme, [string, string]> = {
-    light: ["#faf9f6", "#2b3bff"],
-    dark: ["#0e0f11", "#8e97ff"],
-    sepia: ["#f1e8d7", "#2b3bff"],
+    dark: ["#0b120e", "#34d399"],
+    light: ["#ffffff", "#059669"],
+    sepia: ["#f9f1df", "#4c7c3f"],
   };
   const [bg, dot] = palette[id];
   return (

@@ -113,7 +113,7 @@ export default function AppShell({
           <Link
             href="/dashboard"
             className={clsx("flex items-center", collapsed && "justify-center")}
-            title="Readio"
+            title="ReadIO"
           >
             <Brand size="sm" withWordmark={!collapsed} />
           </Link>
@@ -238,7 +238,7 @@ export default function AppShell({
           className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-bg/85 px-4 py-3 backdrop-blur-xl md:hidden"
           style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0.75rem))" }}
         >
-          <Link href="/dashboard" aria-label="Readio home">
+          <Link href="/dashboard" aria-label="ReadIO home">
             <Brand size="sm" />
           </Link>
           <div className="flex items-center gap-2">

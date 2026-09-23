@@ -222,7 +222,7 @@ export default function ReaderClient({
         return;
       }
       setRemoteProgress(doc.id, userId, index, wpm).catch((err) =>
-        console.warn("Readio sync failed:", err),
+        console.warn("ReadIO sync failed:", err),
       );
     },
     [userId, doc.id, doc.slug],
@@ -662,7 +662,7 @@ export default function ReaderClient({
       {openPanel === "settings" && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="absolute inset-0 bg-ink/60 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
             onClick={() => setOpenPanel(null)}
             aria-hidden="true"
           />

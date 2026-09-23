@@ -4,10 +4,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
 
 /**
- * Scroll-reveal wrapper. Content is visible by default (no JS, no motion);
- * when `html.motion` is present the CSS hides it, and this observer adds
- * `.reveal-in` the first time it enters the viewport. Opacity + transform
- * only — space is always reserved, so there is no layout shift.
+ * Scroll-reveal wrapper: children fade/slide up the first time they enter the
+ * viewport. Purely decorative — with JS off (or reduced motion on) the CSS
+ * keeps everything visible.
  */
 export default function Reveal({
   children,
@@ -21,15 +20,12 @@ export default function Reveal({
   delay?: number;
   as?: "div" | "section" | "li" | "span";
 }) {
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      setShown(true);
-      return;
-    }
+    if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -47,8 +43,8 @@ export default function Reveal({
     <Tag
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ref={ref as any}
-      className={clsx("reveal in-view-target", shown && "reveal-in in-view", className)}
-      style={delay ? ({ "--reveal-delay": `${delay}ms` } as React.CSSProperties) : undefined}
+      className={clsx("reveal", shown && "reveal-in", className)}
+      style={delay ? { animationDelay: `${delay}ms` } : undefined}
     >
       {children}
     </Tag>

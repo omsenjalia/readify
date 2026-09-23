@@ -1,162 +1,135 @@
 @import "tailwindcss";
 
 /*
- * Script faces for the reader (Devanagari, Gujarati). Deliberately plain
- * @font-face — not preloaded — so they are only fetched when a page renders
- * that script.
- */
-@font-face {
-  font-family: "Noto Sans Devanagari";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../../node_modules/@fontsource-variable/noto-sans-devanagari/files/noto-sans-devanagari-devanagari-wght-normal.woff2")
-    format("woff2");
-}
-@font-face {
-  font-family: "Noto Sans Gujarati";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../../node_modules/@fontsource-variable/noto-sans-gujarati/files/noto-sans-gujarati-gujarati-wght-normal.woff2")
-    format("woff2");
-}
+  ReadIO design system — dark-first, green-tinted.
 
-/*
-  Read/IO design system — "Paper".
+  The baseline (`:root`) is the dark theme; `.light` and `.sepia` opt out of
+  it. That flips the old model (light baseline + `.dark` class) so the
+  marketing site, the auth pages and every signed-out reader get the
+  signature look without any theme plumbing, while signed-in users can still
+  pick Light or Sepia for long sessions.
 
-  Light-first editorial: a warm white ground, near-black ink, hairline rules and
-  one restrained ultramarine accent. Black is the action (primary buttons);
-  blue is the attention — the ORP pivot letter, links, active states, focus.
-
-  The baseline (`:root`) is the paper theme. `.theme-ink` and `.theme-sepia`
-  opt out of it via a class applied before first paint (see
-  app/(app)/layout.tsx), so there is no theme flash and no dark default to
-  inherit. The `theme-` prefix keeps the class names clear of Tailwind
-  utilities (a bare `.sepia` class would pick up Tailwind's sepia filter).
-
-  All text pairs below clear WCAG AA (4.5:1) on every surface of every theme;
-  the ORP pivot letter clears 2.85:1 against the word on paper (1.7:1 with the
-  retired emerald palette).
+  Accent: emerald. On dark it is mint-bright (#34d399); on light it deepens
+  (#059669) so body-text contrast stays accessible.
 */
 
 :root {
-  /* ---- paper (default) ---- */
-  --background: #faf9f6;
-  --foreground: #111113;
+  /* ---- dark (default) ---- */
+  --background: #060a08;
+  --foreground: #eaf3ec;
 
-  --color-bg: #faf9f6;
-  --color-bg-elevated: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-soft: #f2f0ea;
-  --color-ink: #111113;
-  --color-muted: #55555e;
-  --color-subtle: #6a6a74;
-  --color-line: #e5e2da;
-  --color-line-strong: #cfcbc1;
+  --color-bg: #060a08;
+  --color-bg-elevated: #0b120e;
+  --color-surface: #0e1712;
+  --color-surface-soft: #14201a;
+  --color-ink: #eaf3ec;
+  --color-muted: #9db0a3;
+  --color-subtle: #647a6b;
+  --color-line: #1b2a21;
+  --color-line-strong: #2b4033;
 
-  --color-accent: #2b3bff;
-  --color-accent-strong: #1b25cc;
-  --color-accent-deep: #141ca8;
-  --color-accent-soft: rgba(43, 59, 255, 0.08);
-  --color-accent-text: #2b3bff;
-  --color-on-accent: #ffffff;
+  --color-accent: #34d399;
+  --color-accent-strong: #10b981;
+  --color-accent-deep: #047857;
+  --color-accent-soft: rgba(52, 211, 153, 0.12);
+  --color-accent-text: #6ee7b7;
+  --color-on-accent: #04150d;
 
-  --color-orp: #2b3bff;
-  --color-progress: #2b3bff;
-  --color-danger: #b3241e;
-  --color-danger-soft: rgba(179, 36, 30, 0.08);
+  --color-orp: #34d399;
+  --color-progress: #34d399;
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
 
-  /* High-contrast pill: near-black on light, near-white on dark. */
-  --color-paper: #111113;
-  --color-ink-inv: #ffffff;
+  /* High-contrast "paper" pill: near-white on dark, near-black on light. */
+  --color-paper: #eef7f0;
+  --color-ink-inv: #0a120d;
 
-  --shadow-card: 0 1px 2px rgb(17 17 19 / 0.04), 0 10px 30px rgb(17 17 19 / 0.07);
-  --shadow-glow: 0 0 48px rgba(43, 59, 255, 0.08);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.35);
+  --shadow-glow: 0 0 48px rgba(52, 211, 153, 0.14);
   --glow-radial: radial-gradient(
-    50% 60% at 50% 0%,
-    rgba(17, 17, 19, 0.05) 0%,
-    rgba(17, 17, 19, 0) 100%
-  );
-
-  color-scheme: light;
-}
-
-.theme-ink {
-  --background: #0e0f11;
-  --foreground: #efeff1;
-
-  --color-bg: #0e0f11;
-  --color-bg-elevated: #141519;
-  --color-surface: #1a1b20;
-  --color-surface-soft: #23242a;
-  --color-ink: #efeff1;
-  --color-muted: #a9abb6;
-  --color-subtle: #8a8d99;
-  --color-line: #2a2c33;
-  --color-line-strong: #41434c;
-
-  --color-accent: #8e97ff;
-  --color-accent-strong: #aeb4ff;
-  --color-accent-deep: #6c76f5;
-  --color-accent-soft: rgba(142, 151, 255, 0.12);
-  --color-accent-text: #8e97ff;
-  --color-on-accent: #0e0f11;
-
-  --color-orp: #8e97ff;
-  --color-progress: #8e97ff;
-  --color-danger: #ff7a6b;
-  --color-danger-soft: rgba(255, 122, 107, 0.12);
-
-  --color-paper: #efeff1;
-  --color-ink-inv: #0e0f11;
-
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px rgb(0 0 0 / 0.4);
-  --shadow-glow: 0 0 48px rgba(142, 151, 255, 0.1);
-  --glow-radial: radial-gradient(
-    50% 60% at 50% 0%,
-    rgba(142, 151, 255, 0.07) 0%,
-    rgba(142, 151, 255, 0) 100%
+    50% 50% at 50% 40%,
+    rgba(52, 211, 153, 0.09) 0%,
+    rgba(52, 211, 153, 0) 100%
   );
 
   color-scheme: dark;
 }
 
-.theme-sepia {
-  --background: #f1e8d7;
-  --foreground: #2a2214;
+.light {
+  --background: #f4f8f4;
+  --foreground: #101a13;
 
-  --color-bg: #f1e8d7;
-  --color-bg-elevated: #f7f1e4;
-  --color-surface: #f8f3e7;
-  --color-surface-soft: #eaddc8;
-  --color-ink: #2a2214;
-  --color-muted: #5e5238;
-  --color-subtle: #6a5c42;
-  --color-line: #dcccb0;
-  --color-line-strong: #c9b88f;
+  --color-bg: #f4f8f4;
+  --color-bg-elevated: #fbfdfb;
+  --color-surface: #ffffff;
+  --color-surface-soft: #ecf2ec;
+  --color-ink: #101a13;
+  --color-muted: #55665a;
+  --color-subtle: #83968a;
+  --color-line: #dce7dd;
+  --color-line-strong: #c2d3c5;
 
-  --color-accent: #2b3bff;
-  --color-accent-strong: #1b25cc;
-  --color-accent-deep: #141ca8;
-  --color-accent-soft: rgba(43, 59, 255, 0.08);
-  --color-accent-text: #2b3bff;
+  --color-accent: #059669;
+  --color-accent-strong: #047857;
+  --color-accent-deep: #065f46;
+  --color-accent-soft: rgba(5, 150, 105, 0.1);
+  --color-accent-text: #047857;
   --color-on-accent: #ffffff;
 
-  --color-orp: #2b3bff;
-  --color-progress: #2b3bff;
-  --color-danger: #a11f3a;
-  --color-danger-soft: rgba(161, 31, 58, 0.08);
+  --color-orp: #059669;
+  --color-progress: #059669;
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.08);
 
-  --color-paper: #2a2214;
-  --color-ink-inv: #f6efe1;
+  --color-paper: #12241a;
+  --color-ink-inv: #f4f8f4;
 
-  --shadow-card: 0 1px 2px rgb(42 34 20 / 0.05), 0 10px 28px rgb(42 34 20 / 0.08);
-  --shadow-glow: 0 0 48px rgba(43, 59, 255, 0.07);
+  --shadow-card: 0 1px 2px rgb(16 26 19 / 0.05), 0 10px 28px rgb(16 26 19 / 0.07);
+  --shadow-glow: 0 0 48px rgba(5, 150, 105, 0.1);
   --glow-radial: radial-gradient(
-    50% 60% at 50% 0%,
-    rgba(42, 34, 20, 0.05) 0%,
-    rgba(42, 34, 20, 0) 100%
+    50% 50% at 50% 40%,
+    rgba(5, 150, 105, 0.07) 0%,
+    rgba(5, 150, 105, 0) 100%
+  );
+
+  color-scheme: light;
+}
+
+.sepia {
+  --background: #f2e9d6;
+  --foreground: #33291a;
+
+  --color-bg: #f2e9d6;
+  --color-bg-elevated: #f9f1df;
+  --color-surface: #f9f1df;
+  --color-surface-soft: #efe4cb;
+  --color-ink: #33291a;
+  --color-muted: #7d6f55;
+  --color-subtle: #a08f6e;
+  --color-line: #e2d4b4;
+  --color-line-strong: #d0bd94;
+
+  --color-accent: #4c7c3f;
+  --color-accent-strong: #3d6733;
+  --color-accent-deep: #2f5227;
+  --color-accent-soft: rgba(76, 124, 63, 0.12);
+  --color-accent-text: #3d6733;
+  --color-on-accent: #fbf6e9;
+
+  --color-orp: #4c7c3f;
+  --color-progress: #4c7c3f;
+  --color-danger: #b3402e;
+  --color-danger-soft: rgba(179, 64, 46, 0.1);
+
+  --color-paper: #2c2415;
+  --color-ink-inv: #f6eeda;
+
+  --shadow-card: 0 1px 2px rgb(51 41 26 / 0.06), 0 10px 28px rgb(51 41 26 / 0.09);
+  --shadow-glow: 0 0 48px rgba(76, 124, 63, 0.12);
+  --glow-radial: radial-gradient(
+    50% 50% at 50% 40%,
+    rgba(76, 124, 63, 0.08) 0%,
+    rgba(76, 124, 63, 0) 100%
   );
 
   color-scheme: light;
@@ -181,21 +154,15 @@
   --color-accent-text: var(--color-accent-text);
   --color-on-accent: var(--color-on-accent);
   --color-orp: var(--color-orp);
-  --color-progress: var(--color-progress);
   --color-danger: var(--color-danger);
   --color-danger-soft: var(--color-danger-soft);
   --color-paper: var(--color-paper);
   --color-ink-inv: var(--color-ink-inv);
 
-  --font-sans: var(--font-mona), "Mona Sans", system-ui, -apple-system,
-    sans-serif;
-  --font-display: var(--font-fraunces), "Fraunces", Georgia, "Times New Roman",
-    serif;
-  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace,
-    "SFMono-Regular", Menlo, "Noto Sans Devanagari", "Noto Sans Gujarati",
-    monospace;
-  --font-reader: var(--font-mona), "Mona Sans", "Noto Sans Devanagari",
-    "Noto Sans Gujarati", system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-newsreader), "Newsreader", Georgia, serif;
+  --font-reader: var(--font-inter), "Inter", var(--font-noto-deva),
+    var(--font-noto-guj), system-ui, sans-serif;
 
   --shadow-card: var(--shadow-card);
   --shadow-glow: var(--shadow-glow);
@@ -215,7 +182,6 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  font-stretch: 100%;
 }
 
 ::selection {
@@ -240,24 +206,13 @@ body {
   background: transparent;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
-}
-
-.font-mono,
-.mono {
-  font-family: var(--font-mono);
+  letter-spacing: -0.015em;
 }
 
 /* ------------------------------------------------------------------ */
-/* Token utility classes                                               */
+/* Token utility classes (kept from the old system, extended)          */
 /* ------------------------------------------------------------------ */
 
 .text-ink { color: var(--color-ink); }
@@ -281,6 +236,13 @@ body {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.card-elevated {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
   box-shadow: var(--shadow-card);
 }
 
@@ -315,30 +277,34 @@ body {
   outline-offset: 2px;
 }
 
-/* Ink primary — the action colour. Lifts a hair on hover. */
+/* Green primary — the signature CTA. */
 .btn-primary {
-  background: var(--color-ink);
-  color: var(--color-bg);
-}
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-card);
-}
-.btn-primary:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* Accent primary — reserved for the one CTA that should sing. */
-.btn-accent {
   background: var(--color-accent);
   color: var(--color-on-accent);
+  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.28);
 }
-.btn-accent:hover {
+.btn-primary:hover {
+  background: var(--color-accent-text);
+}
+.light .btn-primary,
+.sepia .btn-primary {
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
+}
+.light .btn-primary:hover,
+.sepia .btn-primary:hover {
   background: var(--color-accent-strong);
-  transform: translateY(-1px);
+  color: var(--color-on-accent);
 }
 
-/* High-contrast paper pill (black on light / white on dark). */
+/* High-contrast paper pill (white on dark / black on light). */
+.btn-paper {
+  background: var(--color-paper);
+  color: var(--color-ink-inv);
+}
+.btn-paper:hover {
+  opacity: 0.88;
+}
+
 /* Outlined secondary. */
 .btn-outline {
   border: 1px solid var(--color-line-strong);
@@ -346,8 +312,9 @@ body {
   color: var(--color-ink);
 }
 .btn-outline:hover {
-  border-color: var(--color-ink);
-  transform: translateY(-1px);
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
 }
 
 /* Quiet tertiary. */
@@ -391,7 +358,7 @@ body {
   width: 100%;
   border-radius: 0.75rem;
   border: 1px solid var(--color-line-strong);
-  background: var(--color-bg-elevated);
+  background: var(--color-bg);
   color: var(--color-ink);
   padding: 0.625rem 0.875rem;
   font-size: 0.875rem;
@@ -425,7 +392,7 @@ body {
   border-radius: 50%;
   background: var(--color-accent);
   border: 3px solid var(--color-bg-elevated);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   transition: transform 120ms ease;
 }
 .range-accent::-webkit-slider-thumb:hover {
@@ -437,14 +404,14 @@ body {
   border-radius: 50%;
   background: var(--color-accent);
   border: 3px solid var(--color-bg-elevated);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 /* ------------------------------------------------------------------ */
 /* Signature effects                                                   */
 /* ------------------------------------------------------------------ */
 
-/* Soft vignette behind heroes / the reader stage. */
+/* Soft green radial glow behind heroes / the reader stage. */
 .glow-radial {
   background-image: var(--glow-radial);
 }
@@ -452,20 +419,10 @@ body {
 /* Hairline grid used on the marketing hero backdrop. */
 .grid-backdrop {
   background-image:
-    linear-gradient(var(--color-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
-  background-size: 64px 64px;
-  opacity: 0.5;
+    linear-gradient(rgba(120, 200, 160, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 200, 160, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
   mask-image: radial-gradient(70% 60% at 50% 30%, black 30%, transparent 100%);
-}
-
-/* Dotted paper texture for CTA panels. */
-.dot-grid {
-  background-image: radial-gradient(
-    color-mix(in srgb, var(--color-ink) 14%, transparent) 1px,
-    transparent 1px
-  );
-  background-size: 18px 18px;
 }
 
 /* Horizontal edge fade for the sliding line reader. */
@@ -486,47 +443,6 @@ body {
   );
 }
 
-/* Chapter ghost numeral (outlined, sits behind chapter content). */
-.chapter-num {
-  font-family: var(--font-display);
-  font-weight: 340;
-  font-variation-settings: "opsz" 144, "SOFT" 60, "WONK" 0;
-  line-height: 0.8;
-  color: transparent;
-  -webkit-text-stroke: 1.5px var(--color-line-strong);
-}
-
-/* Oversized footer wordmark. Solid ink; the variable weight sweeps from
-   light to heavy the first time it scrolls into view (Fraunces wght axis —
-   font-weight animates on variable fonts). Visible without motion. */
-.wordmark-sweep {
-  font-family: var(--font-display);
-  font-weight: 650;
-  will-change: font-weight, opacity;
-}
-html.motion .reveal .wordmark-sweep {
-  font-weight: 300;
-  opacity: 0.35;
-}
-html.motion .reveal.reveal-in .wordmark-sweep {
-  animation: wordmark-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-@keyframes wordmark-in {
-  from { font-weight: 300; opacity: 0.35; }
-  to { font-weight: 650; opacity: 1; }
-}
-
-/* Highlighter mark for lede keywords — a soft accent wash, slightly
-   oversized like a real highlighter stroke. */
-.highlight {
-  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
-  color: inherit;
-  padding: 0.05em 0.14em;
-  border-radius: 0.15em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
 /* ------------------------------------------------------------------ */
 /* Animations                                                          */
 /* ------------------------------------------------------------------ */
@@ -542,74 +458,24 @@ html.motion .reveal.reveal-in .wordmark-sweep {
   animation-play-state: paused;
 }
 
-/* Line-flow chapter visual: one line walks past the fixed eye. */
-@keyframes walk {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.animate-walk {
-  animation: walk 22s linear infinite;
-}
-.line-flow:hover .animate-walk,
-.line-flow:focus-within .animate-walk {
-  animation-play-state: paused;
-}
-
-/* Drop-tray parsing shimmer. */
-@keyframes parse {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-.animate-parse {
-  animation: parse 1.4s ease-in-out infinite;
-}
-
-/*
- * Scroll reveal. Visible by default (no JS, no motion): enhancement only.
- * `.motion` is added pre-paint when the user hasn't opted out; `.reveal-in`
- * is added by the IntersectionObserver. Opacity + transform only — space is
- * always reserved, so nothing shifts.
- */
 .reveal {
-  opacity: 1;
-  transform: none;
-}
-html.motion .reveal {
   opacity: 0;
-  transform: translateY(18px);
-  transition:
-    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform;
 }
-html.motion .reveal.reveal-in {
-  opacity: 1;
-  transform: none;
-}
-
-/* Line-mask reveal for display headings: each line rises out of a clip. */
-.mask-line {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.08em;
-  margin-bottom: -0.08em;
-}
-html.motion .mask-line > span {
-  display: block;
-  transform: translateY(110%);
-  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: var(--reveal-delay, 0ms);
-  will-change: transform;
-}
-html.motion .in-view .mask-line > span,
-html.motion .mask-line.in-view > span {
-  transform: none;
+.reveal.reveal-in {
+  animation: reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes word-swap-in {
   from { opacity: 0; transform: translateY(0.55em); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes word-swap-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-0.55em); }
 }
 .word-swap-in {
   animation: word-swap-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
@@ -656,18 +522,34 @@ html.motion .mask-line.in-view > span {
   animation: pulse-soft 1.6s ease-in-out infinite;
 }
 
-/* Top-of-page scroll progress hairline. */
-.scroll-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  z-index: 60;
-  background: var(--color-accent);
-  transform-origin: left;
-  transform: scaleX(0);
-  pointer-events: none;
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float {
+  animation: float-y 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee,
+  .animate-pulse-soft,
+  .animate-float,
+  .reveal.reveal-in,
+  .word-swap-in,
+  .line-enter-forward,
+  .line-enter-backward {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1;
+  }
 }
 
 /* Bottom sheet entrance (mobile reader settings). */
@@ -679,31 +561,5 @@ html.motion .mask-line.in-view > span {
   animation: sheet-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .animate-marquee,
-  .animate-pulse-soft,
-  .word-swap-in,
-  .line-enter-forward,
-  .line-enter-backward,
-  .animate-walk,
-  .animate-parse,
-  html.motion .reveal.reveal-in .wordmark-sweep {
-    animation: none !important;
-  }
-  html.motion .reveal .wordmark-sweep {
-    font-weight: 650 !important;
-    opacity: 1 !important;
-  }
-  html.motion .reveal,
-  html.motion .mask-line > span {
-    transition: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-  .scroll-progress {
-    display: none;
-  }
-}
+/* Opt-in variant for the light/sepia themes (baseline is dark). */
+@custom-variant light (&:where(.light, .light *));

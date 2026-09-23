@@ -9,7 +9,6 @@ import {
   FONT_MIN,
   SMALL_VIEWPORT_QUERY,
   THEMES,
-  THEME_CLASS,
   WPM_MAX,
   WPM_MIN,
   type ReaderPrefs,
@@ -30,15 +29,13 @@ function asTheme(value: string | null | undefined): Theme {
 }
 
 /**
- * Paper (light) is the baseline (no class on <html>); dark→`.theme-ink` and
- * sepia→`.theme-sepia` are opt-in classes. Shared with the settings page so
- * the two can never drift.
+ * Dark is the baseline (no class on <html>); light/sepia are opt-in classes.
+ * Shared with the settings page so the two can never drift.
  */
 export function applyThemeClass(theme: Theme): void {
   const root = document.documentElement;
-  root.classList.remove("theme-ink", "theme-sepia");
-  const cls = THEME_CLASS[theme];
-  if (cls) root.classList.add(cls);
+  root.classList.remove("dark", "light", "sepia");
+  if (theme !== "dark") root.classList.add(theme);
 }
 
 export interface UseReaderSettingsOptions {
