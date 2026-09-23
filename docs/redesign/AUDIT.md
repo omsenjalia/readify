@@ -71,7 +71,7 @@ green deepened `#059669 → #047857` (both near-indistinguishable, both now
 
 ## Reader polish (follow-up on the same branch)
 
-User-requested reader fixes, all shipped on this branch:
+User-requested fixes, all shipped on this branch:
 
 1. **Zero eye travel in Line Flow** — root cause: the strip aligned the
    *word centre* to the axis, so the red ORP character (the designated
