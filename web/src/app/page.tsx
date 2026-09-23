@@ -48,16 +48,6 @@ export default async function HomePage() {
         />
 
         <Reveal className="relative">
-          <span className="pill pill-accent mx-auto !px-4 !py-1.5 text-xs font-semibold">
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: "var(--color-accent)" }}
-            />
-            New — Line Flow reading
-          </span>
-        </Reveal>
-
-        <Reveal delay={80} className="relative mt-6">
           <h1 className="mx-auto max-w-4xl text-[2.6rem] font-extrabold leading-[1.03] tracking-tight text-balance sm:text-6xl lg:text-7xl">
             Read{" "}
             <RotatingWord
@@ -70,7 +60,7 @@ export default async function HomePage() {
 
         <Reveal delay={160} className="relative mt-6">
           <p className="mx-auto max-w-xl text-base leading-relaxed text-muted text-balance sm:text-lg">
-            ReadIO turns PDFs, documents and YouTube transcripts into a
+            Readio turns PDFs, documents and YouTube transcripts into a
             focused stream that slides past a single fixed point — your eyes
             stay perfectly still, up to 800 words per minute.
           </p>
@@ -108,7 +98,7 @@ export default async function HomePage() {
         <div className="mx-auto w-full max-w-6xl">
           <Reveal className="mb-12 text-center lg:hidden">
             <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-accent">
-              Why ReadIO
+              Why Readio
             </p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
               Built for focus, at speed
@@ -156,7 +146,7 @@ export default async function HomePage() {
             &ldquo;A calmer mind for a deeper you.&rdquo;
           </p>
           <p className="mt-5 text-xs font-bold uppercase tracking-[0.24em] text-subtle">
-            The ReadIO promise
+            The Readio promise
           </p>
         </Reveal>
       </section>

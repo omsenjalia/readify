@@ -222,7 +222,7 @@ export default function ReaderClient({
         return;
       }
       setRemoteProgress(doc.id, userId, index, wpm).catch((err) =>
-        console.warn("ReadIO sync failed:", err),
+        console.warn("Readio sync failed:", err),
       );
     },
     [userId, doc.id, doc.slug],
@@ -635,6 +635,11 @@ export default function ReaderClient({
           setOpenPanel={setOpenPanel}
           onStep={step}
           onTogglePlay={togglePlay}
+          onReset={() => {
+            seek(0);
+            toast.success("Back to the beginning", { id: "reader-reset" });
+          }}
+          onFullscreen={toggleFullscreen}
         />
 
         {!isFullscreen && (

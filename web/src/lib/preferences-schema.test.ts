@@ -11,13 +11,13 @@ describe("sanitizePreferencePatch", () => {
       sanitizePreferencePatch({
         default_wpm: 400,
         font_size: 52,
-        theme: "dark",
+        theme: "light",
         highlight_orp: false,
       }),
     ).toEqual({
       default_wpm: 400,
       font_size: 52,
-      theme: "dark",
+      theme: "light",
       highlight_orp: false,
     });
   });
@@ -58,10 +58,11 @@ describe("sanitizePreferencePatch", () => {
     );
   });
 
-  it("only accepts known themes", () => {
+  it("only accepts known themes (white is the single theme)", () => {
     expect(sanitizePreferencePatch({ theme: "neon" })).toEqual({});
-    expect(sanitizePreferencePatch({ theme: "sepia" })).toEqual({
-      theme: "sepia",
+    expect(sanitizePreferencePatch({ theme: "sepia" })).toEqual({});
+    expect(sanitizePreferencePatch({ theme: "light" })).toEqual({
+      theme: "light",
     });
   });
 
@@ -85,6 +86,6 @@ describe("sanitizePreferencePatch", () => {
 describe("isEmptyPatch", () => {
   it("detects empty and non-empty patches", () => {
     expect(isEmptyPatch({})).toBe(true);
-    expect(isEmptyPatch({ theme: "dark" })).toBe(false);
+    expect(isEmptyPatch({ theme: "light" })).toBe(false);
   });
 });

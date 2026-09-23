@@ -70,7 +70,7 @@ export default function ReaderHeader({
         <Link
           href={homeHref}
           className="flex shrink-0 items-center"
-          aria-label="ReadIO home"
+          aria-label="Readio home"
         >
           <Brand size="sm" />
         </Link>

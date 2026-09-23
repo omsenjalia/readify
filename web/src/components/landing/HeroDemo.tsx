@@ -15,7 +15,7 @@ import type { ReadItem } from "@/lib/flatten";
  */
 
 const SAMPLE =
-  "Your eyes never have to move now. The line slides beneath one fixed point of focus while the green pivot character lands exactly where your attention is already waiting. No searching, no skipping back, no lost place — just a steady rhythm that keeps accelerating until reading feels like thinking.";
+  "Your eyes never have to move now. The line slides beneath one fixed point of focus while the red pivot character lands exactly where your attention is already waiting. No searching, no skipping back, no lost place — just a steady rhythm that keeps accelerating until reading feels like thinking.";
 
 const DEMO_WPM = 240;
 
@@ -132,7 +132,7 @@ export default function HeroDemo() {
           )}
         </button>
         <p className="text-[11px] font-medium text-subtle sm:text-xs">
-          The green pivot never moves — the text does.{" "}
+          The red pivot never moves — the text does.{" "}
           <span className="hidden sm:inline">Tap the card to pause.</span>
         </p>
       </div>

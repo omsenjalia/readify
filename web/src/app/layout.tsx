@@ -71,17 +71,17 @@ const notoGuj = localFont({
 });
 
 export const metadata: Metadata = {
-  applicationName: "ReadIO",
+  applicationName: "Read/IO",
   title: {
-    default: "ReadIO — Read at the speed of thought",
-    template: "%s — ReadIO",
+    default: "Read/IO — Read at the speed of thought",
+    template: "%s — Read/IO",
   },
   description:
-    "ReadIO turns PDFs, documents and YouTube transcripts into a focused speed-reading stream. Line Flow keeps your eyes perfectly still while the text moves.",
+    "Readio turns PDFs, documents and YouTube transcripts into a focused speed-reading stream. Line Flow keeps your eyes perfectly still while the text moves.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#060a08",
+  themeColor: "#f4f8f4",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

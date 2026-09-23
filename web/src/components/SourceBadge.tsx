@@ -4,10 +4,10 @@ import { AlignLeft, Play } from "lucide-react";
 /**
  * File-type badge for a document row.
  *
- * One component, three sizes. Colours are conventional (red PDF, blue DOCX,
- * red YouTube) but rendered as soft tinted pills so they sit inside the
- * green-toned design system instead of shouting over it; plain text gets the
- * brand accent.
+ * One component, three sizes. Conventional colour coding (red PDF, blue DOCX,
+ * red YouTube) rendered as soft tinted pills so they sit inside the white,
+ * green-tinted design system without shouting; plain text gets the brand
+ * accent.
  */
 
 type Size = "sm" | "md" | "lg";
@@ -44,29 +44,11 @@ export default function SourceBadge({
   );
 
   if (type === "pdf") {
-    return (
-      <span
-        className={clsx(
-          base,
-          "bg-red-500/15 text-red-400 light:bg-red-500/10 light:text-red-600",
-        )}
-      >
-        PDF
-      </span>
-    );
+    return <span className={clsx(base, "bg-red-500/10 text-red-600")}>PDF</span>;
   }
 
   if (type === "docx") {
-    return (
-      <span
-        className={clsx(
-          base,
-          "bg-sky-500/15 text-sky-400 light:bg-sky-500/10 light:text-sky-600",
-        )}
-      >
-        DOCX
-      </span>
-    );
+    return <span className={clsx(base, "bg-sky-500/10 text-sky-600")}>DOCX</span>;
   }
 
   if (type === "youtube") {
@@ -74,7 +56,7 @@ export default function SourceBadge({
       <span
         className={clsx(
           base,
-          "rounded-full bg-red-500/15 text-red-400 light:bg-red-500/10 light:text-red-600",
+          "rounded-full bg-red-500/10 text-red-600",
         )}
         aria-label="YouTube"
       >
@@ -84,10 +66,7 @@ export default function SourceBadge({
   }
 
   return (
-    <span
-      className={clsx(base, "bg-accent-soft text-accent")}
-      aria-label="Text document"
-    >
+    <span className={clsx(base, "bg-accent-soft text-accent")} aria-label="Text document">
       <AlignLeft size={s.icon} />
     </span>
   );
