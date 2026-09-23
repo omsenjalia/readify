@@ -48,16 +48,6 @@ export default async function HomePage() {
         />
 
         <Reveal className="relative">
-          <span className="pill pill-accent mx-auto !px-4 !py-1.5 text-xs font-semibold">
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ background: "var(--color-accent)" }}
-            />
-            New — Line Flow reading
-          </span>
-        </Reveal>
-
-        <Reveal delay={80} className="relative mt-6">
           <h1 className="mx-auto max-w-4xl text-[2.6rem] font-extrabold leading-[1.03] tracking-tight text-balance sm:text-6xl lg:text-7xl">
             Read{" "}
             <RotatingWord

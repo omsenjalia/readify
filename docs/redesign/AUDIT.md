@@ -103,6 +103,10 @@ User-requested reader fixes, all shipped on this branch:
    Measured: play at the viewport centre on both 375px and 1440px
    (0.0px off-centre; was +50px / −28px). Fullscreen toggle verified
    functionally (enters fullscreen, "Esc to exit" appears, no errors).
+5. **Hero "New — Line Flow reading" badge removed** from the landing
+   page (user request) — the hero now opens directly on the headline;
+   `pill-accent` stays in use by the hero demo card and settings form,
+   so no dead CSS.
 
 All gates re-run after these changes: production build 15/15, 123/123
 tests, eslint 0, CLS 0.0000 on every page × width, no console/hydration
