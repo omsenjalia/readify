@@ -23,6 +23,8 @@ export default function ImageStage({
         <img
           src={url}
           alt="Document figure"
+          loading="lazy"
+          decoding="async"
           className="max-h-[min(62vh,28rem)] w-full rounded-xl object-contain"
         />
       </div>

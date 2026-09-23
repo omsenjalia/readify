@@ -29,9 +29,11 @@
   one restrained ultramarine accent. Black is the action (primary buttons);
   blue is the attention — the ORP pivot letter, links, active states, focus.
 
-  The baseline (`:root`) is the paper theme. `.ink` and `.sepia` opt out of it
-  via a class applied before first paint (see app/(app)/layout.tsx), so there is
-  no theme flash and no dark default to inherit.
+  The baseline (`:root`) is the paper theme. `.theme-ink` and `.theme-sepia`
+  opt out of it via a class applied before first paint (see
+  app/(app)/layout.tsx), so there is no theme flash and no dark default to
+  inherit. The `theme-` prefix keeps the class names clear of Tailwind
+  utilities (a bare `.sepia` class would pick up Tailwind's sepia filter).
 
   All text pairs below clear WCAG AA (4.5:1) on every surface of every theme;
   the ORP pivot letter clears 2.85:1 against the word on paper (1.7:1 with the
@@ -80,7 +82,7 @@
   color-scheme: light;
 }
 
-.ink {
+.theme-ink {
   --background: #0e0f11;
   --foreground: #efeff1;
 
@@ -120,7 +122,7 @@
   color-scheme: dark;
 }
 
-.sepia {
+.theme-sepia {
   --background: #f1e8d7;
   --foreground: #2a2214;
 
@@ -190,7 +192,8 @@
   --font-display: var(--font-fraunces), "Fraunces", Georgia, "Times New Roman",
     serif;
   --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace,
-    "SFMono-Regular", Menlo, monospace;
+    "SFMono-Regular", Menlo, "Noto Sans Devanagari", "Noto Sans Gujarati",
+    monospace;
   --font-reader: var(--font-mona), "Mona Sans", "Noto Sans Devanagari",
     "Noto Sans Gujarati", system-ui, sans-serif;
 
@@ -281,13 +284,6 @@ body {
   box-shadow: var(--shadow-card);
 }
 
-.card-elevated {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-line);
-  border-radius: 1.25rem;
-  box-shadow: var(--shadow-card);
-}
-
 /* ------------------------------------------------------------------ */
 /* Buttons & pills                                                     */
 /* ------------------------------------------------------------------ */
@@ -343,14 +339,6 @@ body {
 }
 
 /* High-contrast paper pill (black on light / white on dark). */
-.btn-paper {
-  background: var(--color-paper);
-  color: var(--color-ink-inv);
-}
-.btn-paper:hover {
-  opacity: 0.88;
-}
-
 /* Outlined secondary. */
 .btn-outline {
   border: 1px solid var(--color-line-strong);
@@ -668,52 +656,6 @@ html.motion .mask-line.in-view > span {
   animation: pulse-soft 1.6s ease-in-out infinite;
 }
 
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes float-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-.animate-float {
-  animation: float-y 7s ease-in-out infinite;
-}
-
-/* Chapter visuals */
-
-/* The Line Flow chapter: a word track gliding under the fixed axis. */
-@keyframes line-loop {
-  from { transform: translateX(12%); }
-  to { transform: translateX(-12%); }
-}
-.line-loop {
-  animation: line-loop 9s ease-in-out infinite alternate;
-}
-
-/* ORP chapter: a ring expanding from the pivot letter. */
-@keyframes orp-ring {
-  from { transform: scale(0.55); opacity: 0.9; }
-  to { transform: scale(1.7); opacity: 0; }
-}
-.orp-ring {
-  animation: orp-ring 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-/* Pace chapter: bars grow from the baseline when the panel scrolls in. */
-.pace-bar {
-  transform: scaleY(0.12);
-  transform-origin: bottom;
-}
-.in-view .pace-bar,
-html:not(.motion) .pace-bar {
-  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: var(--bar-delay, 0ms);
-}
-.in-view .pace-bar {
-  transform: scaleY(1);
-}
-
 /* Top-of-page scroll progress hairline. */
 .scroll-progress {
   position: fixed;
@@ -743,9 +685,6 @@ html:not(.motion) .pace-bar {
   }
   .animate-marquee,
   .animate-pulse-soft,
-  .animate-float,
-  .line-loop,
-  .orp-ring,
   .word-swap-in,
   .line-enter-forward,
   .line-enter-backward,
@@ -763,10 +702,6 @@ html:not(.motion) .pace-bar {
     transition: none !important;
     opacity: 1 !important;
     transform: none !important;
-  }
-  .pace-bar {
-    transform: none !important;
-    transition: none !important;
   }
   .scroll-progress {
     display: none;

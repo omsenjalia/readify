@@ -1,4 +1,4 @@
-// Generated Database types for ReadIO.
+// Generated Database types for Readio.
 //
 // These were written by hand to match supabase/migrations/
 // 20260113120000_database_schema_and_rls.sql. Regenerate with:

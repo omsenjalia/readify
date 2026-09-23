@@ -96,6 +96,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // The pre-paint motion gate (and the signed-in theme script) add
+      // classes to <html> before hydration, the same pattern next-themes
+      // uses — React must not flag those attributes as mismatches.
+      suppressHydrationWarning
       className={`${fraunces.variable} ${mona.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>

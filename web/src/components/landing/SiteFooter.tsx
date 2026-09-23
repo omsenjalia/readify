@@ -48,13 +48,13 @@ export default function SiteFooter() {
       <div className="mx-auto w-full max-w-6xl px-5 pb-10 pt-16 sm:px-8 sm:pt-20">
         {/* Giant wordmark — weight sweeps in when it enters the viewport */}
         <Reveal as="div" className="overflow-hidden">
-          <a
+          <Link
             href="/"
             aria-label="Read/IO home"
             className="wordmark-sweep block select-none text-[clamp(4.5rem,17vw,15rem)] leading-[0.9] tracking-[-0.04em] text-ink"
           >
             Read<span className="text-accent">/</span>IO
-          </a>
+          </Link>
         </Reveal>
 
         <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">

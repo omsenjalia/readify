@@ -30,13 +30,13 @@ function asTheme(value: string | null | undefined): Theme {
 }
 
 /**
- * Paper (light) is the baseline (no class on <html>); dark→`.ink` and sepia
- * are opt-in classes. Shared with the settings page so the two can never
- * drift.
+ * Paper (light) is the baseline (no class on <html>); dark→`.theme-ink` and
+ * sepia→`.theme-sepia` are opt-in classes. Shared with the settings page so
+ * the two can never drift.
  */
 export function applyThemeClass(theme: Theme): void {
   const root = document.documentElement;
-  root.classList.remove("ink", "sepia");
+  root.classList.remove("theme-ink", "theme-sepia");
   const cls = THEME_CLASS[theme];
   if (cls) root.classList.add(cls);
 }

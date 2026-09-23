@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { AlignLeft, Play } from "lucide-react";
+import { Play } from "lucide-react";
 
 /**
  * File-type badge for a document row.

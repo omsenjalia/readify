@@ -4,7 +4,7 @@ import DemoReader from "./demo-reader";
 export const metadata: Metadata = {
   title: "Try the reader",
   description:
-    "Experience ReadIO's Line Flow reader — no account needed. The text slides beneath a fixed focus point while your eyes stay perfectly still.",
+    "Experience Readio's Line Flow reader — no account needed. The text slides beneath a fixed focus point while your eyes stay perfectly still.",
 };
 
 /**

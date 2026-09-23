@@ -21,8 +21,9 @@ export default async function AppLayout(props: LayoutProps<"/">) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Paper (light) is the baseline (no class); dark→`.ink` and sepia opt in
-  // via a class applied before first paint so there is no theme flash.
+  // Paper (light) is the baseline (no class); dark→`.theme-ink` and
+  // sepia→`.theme-sepia` opt in via a class applied before first paint so
+  // there is no theme flash.
   const themeClass = THEME_CLASS[prefs?.theme as Theme] ?? null;
 
   return (

@@ -246,12 +246,12 @@ export function FinalCta() {
           <em className="italic text-accent">stop moving</em> now.
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-muted sm:text-lg">
-          Drop in anything you've been putting off reading, set a pace, and
-          let the page do the walking.
+          Drop in anything you&rsquo;ve been putting off reading, set a pace,
+          and let the page do the walking.
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/signup" className="btn btn-primary btn-lg w-full sm:w-auto">
-            Get started — it's free
+            Get started — it&rsquo;s free
           </Link>
           <Link
             href="/demo"

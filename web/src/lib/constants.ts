@@ -34,7 +34,9 @@ export const PREFERENCE_DEFAULTS = {
  * `sepia` are opt-in overrides applied via a class before first paint.
  * Listed light-first so theme pickers show the default first.
  *
- * Note: `dark` predates the Paper redesign and maps to the `.ink` class.
+ * Note: `dark` predates the Paper redesign and maps to the `.theme-ink`
+ * class. The `theme-` prefix avoids clashing with Tailwind utilities
+ * (the bare class `sepia` is Tailwind's sepia filter).
  */
 export type Theme = "light" | "dark" | "sepia";
 export const THEMES: readonly Theme[] = ["light", "dark", "sepia"];
@@ -43,8 +45,8 @@ export const DEFAULT_THEME: Theme = "light";
 /** Maps a stored theme value to the <html> class (null = baseline Paper). */
 export const THEME_CLASS: Record<Theme, string | null> = {
   light: null,
-  dark: "ink",
-  sepia: "sepia",
+  dark: "theme-ink",
+  sepia: "theme-sepia",
 };
 
 /** Minimal shape the reader needs; kept structural so it accepts rows. */
