@@ -9,6 +9,7 @@ import {
   Pencil,
   RefreshCw,
   Share2,
+  SquarePen,
   Trash2,
 } from "lucide-react";
 import MenuAction from "@/components/library/MenuAction";
@@ -36,6 +37,7 @@ export default function ReaderHeader({
   onCancelRename,
   onShare,
   onToggleVisibility,
+  onEdit,
   onReprocess,
   reprocessing,
   onDelete,
@@ -57,6 +59,8 @@ export default function ReaderHeader({
   onCancelRename: () => void;
   onShare: () => void;
   onToggleVisibility: () => void;
+  /** Open the Word-style editor for this document (owner only). */
+  onEdit?: () => void;
   onReprocess: () => void;
   reprocessing: boolean;
   onDelete: () => void;
@@ -164,6 +168,13 @@ export default function ReaderHeader({
                           label="Rename"
                           onClick={onStartRename}
                         />
+                        {onEdit && (
+                          <MenuAction
+                            icon={<SquarePen className="h-4 w-4" />}
+                            label="Edit content"
+                            onClick={onEdit}
+                          />
+                        )}
                         <MenuAction
                           icon={
                             isPublic ? (

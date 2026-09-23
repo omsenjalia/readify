@@ -1,7 +1,8 @@
 // Generated Database types for Readio.
 //
-// These were written by hand to match supabase/migrations/
-// 20260113120000_database_schema_and_rls.sql. Regenerate with:
+// Hand-written to match the consolidated schema:
+//   supabase/migrations/20260923160000_readio_consolidated_schema.sql
+// Regenerate with:
 //   npm run db:types   (after `npx supabase login`)
 
 export type Json =
@@ -115,6 +116,7 @@ export type Database = {
           words: string[] | null;
           image_url: string | null;
           needs_ocr: boolean | null;
+          html: string | null;
           created_at: string;
         };
         Insert: {
@@ -125,6 +127,7 @@ export type Database = {
           words?: string[] | null;
           image_url?: string | null;
           needs_ocr?: boolean | null;
+          html?: string | null;
           created_at?: string;
         };
         Update: {
@@ -135,6 +138,7 @@ export type Database = {
           words?: string[] | null;
           image_url?: string | null;
           needs_ocr?: boolean | null;
+          html?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -237,5 +241,8 @@ export type Database = {
     CompositeTypes: Record<string, never>;
   };
 };
+
+// `content_blocks.html` (editor formatting) is included above — see the
+// consolidated schema for the full column list.
 
 export default Database;

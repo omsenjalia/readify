@@ -12,6 +12,7 @@ import {
   type DocumentWithProgress,
   type ProcessingStatus,
 } from "@/types";
+import type { EditorBlock } from "@/lib/editor";
 
 /** Shape returned by GET /api/documents/[id]/status. */
 export interface DocumentStatus {
@@ -82,6 +83,51 @@ export function updateDocument(
 /** DELETE a document and its stored files. */
 export function deleteDocument(id: string): Promise<void> {
   return request<void>(`/api/documents/${id}`, { method: "DELETE" });
+}
+
+/* ------------------------------------------------------------------ */
+/* Editor                                                              */
+/* ------------------------------------------------------------------ */
+
+/** Result of an editor autosave. */
+export interface SavedContent {
+  word_count: number;
+  block_count: number;
+  saved_at: string;
+}
+
+/**
+ * Persist the full editing canvas (PUT /api/documents/[id]/content).
+ *
+ * The route replaces the document's blocks atomically-enough for autosave
+ * (validate -> delete -> single multi-row insert) and recomputes
+ * `word_count` from the HTML the client sent.
+ */
+export function saveDocumentContent(
+  id: string,
+  blocks: EditorBlock[],
+): Promise<SavedContent> {
+  return request<SavedContent>(`/api/documents/${id}/content`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ blocks }),
+  });
+}
+
+/**
+ * Sign storage paths under this document so the editor can show freshly
+ * uploaded figures (the bucket is private — every read URL is minted
+ * server-side after an ownership check).
+ */
+export function signDocumentImages(
+  id: string,
+  paths: string[],
+): Promise<{ urls: Record<string, string> }> {
+  return request<{ urls: Record<string, string> }>(`/api/documents/${id}/sign`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paths }),
+  });
 }
 
 /**

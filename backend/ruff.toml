@@ -8,3 +8,6 @@ select = ["E", "F", "I", "UP", "B"]
 # FastAPI's Form()/File() defaults are the canonical idiom and must NOT be
 # hoisted to module level.
 "routers/process.py" = ["B008"]
+# Crafted OOXML fixtures — the long content-type/relationship URLs are
+# machine data and cannot be wrapped inside the XML string.
+"tests/test_docx_service.py" = ["E501"]

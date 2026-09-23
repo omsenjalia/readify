@@ -94,14 +94,28 @@ class TestPrepareReadableText:
 class TestExtractText:
     def test_splits_paragraphs_on_blank_lines(self):
         blocks = extract_text("first para\n\nsecond para")
-        assert blocks == [
-            {"type": "paragraph", "text": "first para"},
-            {"type": "paragraph", "text": "second para"},
+        assert [b["text"] for b in blocks] == ["first para", "second para"]
+        assert [b["html"] for b in blocks] == [
+            "<p>first para</p>",
+            "<p>second para</p>",
         ]
 
     def test_joins_lines_inside_a_paragraph(self):
         blocks = extract_text("one\ntwo")
-        assert blocks == [{"type": "paragraph", "text": "one two"}]
+        assert blocks[0]["text"] == "one two"
+        assert blocks[0]["html"] == "<p>one<br>\ntwo</p>"
+
+    def test_html_escapes_markup_in_plain_text(self):
+        blocks = extract_text("a <b> & c")
+        assert blocks[0]["html"] == "<p>a &lt;b&gt; &amp; c</p>"
+
+    def test_markdown_syntax_stays_out_of_html(self):
+        # Markdown is stripped first; the editor shows the rendered-free
+        # plain paragraph, never the raw markers.
+        blocks = extract_text("# Title\n\nSome **bold** text")
+        for block in blocks:
+            assert "#" not in block["html"]
+            assert "**" not in block["html"]
 
     def test_empty_input(self):
         assert extract_text("") == []

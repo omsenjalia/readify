@@ -8,6 +8,7 @@ import pymupdf
 
 from db import get_supabase
 from services.ocr import ocr_page_image
+from services.richtext import pdf_dict_to_html, plain_text_to_html
 from services.text_service import tokenize_words
 
 logger = logging.getLogger(__name__)
@@ -65,9 +66,16 @@ async def extract_pdf_blocks(
             has_text = len(text) > 20
 
             if has_text:
-                blocks.append(
-                    {"type": "text", "words": tokenize_words(text)}
-                )
+                text_block: dict = {"type": "text", "words": tokenize_words(text)}
+                try:
+                    # Keep the page's formatting (bold spans, headings) for
+                    # the editor; `words` alone cannot express it.
+                    page_html = pdf_dict_to_html(page.get_text("dict"))
+                    if page_html:
+                        text_block["html"] = page_html
+                except Exception as exc:  # noqa: BLE001 - formatting is best-effort
+                    logger.warning("page %d html render failed: %r", page_num, exc)
+                blocks.append(text_block)
 
             if has_text:
                 # Figures on a text page: always store as images (3s dwell, no OCR
@@ -102,7 +110,11 @@ async def extract_pdf_blocks(
                     if sparse_text and large and len(img_bytes) > 8_000:
                         text_block_idx = len(blocks)
                         blocks.append(
-                            {"type": "text", "words": ["[Figure text]"]}
+                            {
+                                "type": "text",
+                                "words": ["[Figure text]"],
+                                "html": "<p>[Figure text]</p>",
+                            }
                         )
                         ocr_tasks.append(
                             (page_num, text_block_idx, img_bytes)
@@ -142,9 +154,14 @@ async def extract_pdf_blocks(
                 if full_text and full_text.strip():
                     # Replace all scanned placeholders with a single text stream
                     words = tokenize_words(full_text)
+                    full_html = plain_text_to_html(full_text)
                     # Keep image blocks; collapse OCR text into first placeholder
                     first_idx = ocr_tasks[0][1]
-                    blocks[first_idx] = {"type": "text", "words": words}
+                    blocks[first_idx] = {
+                        "type": "text",
+                        "words": words,
+                        "html": full_html,
+                    }
                     for _, text_block_idx, _ in ocr_tasks[1:]:
                         blocks[text_block_idx] = {
                             "type": "text",
@@ -208,7 +225,11 @@ async def _timed_ocr(page_num: int, image_bytes: bytes) -> tuple[float, object]:
 
 def _unreadable_block() -> dict:
     """Placeholder shown to the reader when a page cannot be extracted."""
-    return {"type": "text", "words": ["[Page could not be read]"]}
+    return {
+        "type": "text",
+        "words": ["[Page could not be read]"],
+        "html": "<p>[Page could not be read]</p>",
+    }
 
 
 def _ocr_result_block(page_num: int, elapsed: float, result: object) -> dict:
@@ -224,4 +245,4 @@ def _ocr_result_block(page_num: int, elapsed: float, result: object) -> dict:
 
     words = tokenize_words(text)
     logger.info("OCR page %d: %d words in %.2fs", page_num, len(words), elapsed)
-    return {"type": "text", "words": words}
+    return {"type": "text", "words": words, "html": plain_text_to_html(text)}

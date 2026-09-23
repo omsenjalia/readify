@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import clsx from "clsx";
 import {
   BookOpen,
+  FilePenLine,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -268,6 +269,14 @@ export default function LibraryTable({
             onClick={() => {
               setMenuId(null);
               router.push(`/c/${doc.slug}`);
+            }}
+          />
+          <MenuAction
+            icon={<FilePenLine className="h-4 w-4" />}
+            label="Edit content"
+            onClick={() => {
+              setMenuId(null);
+              router.push(`/edit/${doc.slug}`);
             }}
           />
           <MenuAction
